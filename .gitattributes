@@ -1,5 +1,6 @@
 * text=auto
 .gitattributes text eol=lf
+LICENSE text eol=lf
 
 *.kt text eol=lf
 *.kts text eol=lf
