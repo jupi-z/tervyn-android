@@ -28,10 +28,12 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import dev.amenokizele.tervyn.R
 import dev.amenokizele.tervyn.model.JobStatus
 import dev.amenokizele.tervyn.model.ThemeMode
 import dev.amenokizele.tervyn.ui.components.InlineMessage
@@ -60,7 +62,7 @@ fun CompleteJobScreen(
     Scaffold(
         topBar = {
             TervynTopAppBar(
-                title = "Clôture d'intervention",
+                title = stringResource(R.string.title_complete_job),
                 subtitle = job?.reference,
                 onBackClick = onBackClick
             )
@@ -92,7 +94,7 @@ fun CompleteJobScreen(
                 Spacer(modifier = Modifier.height(Spacing.lg))
 
                 Text(
-                    text = "Terminer l'intervention ?",
+                    text = stringResource(R.string.complete_confirm_title),
                     style = MaterialTheme.typography.headlineSmall,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface
@@ -101,7 +103,7 @@ fun CompleteJobScreen(
                 Spacer(modifier = Modifier.height(Spacing.sm))
 
                 Text(
-                    text = "Vous pourrez toujours consulter cette intervention, mais elle ne sera plus modifiable depuis l'application.",
+                    text = stringResource(R.string.complete_confirm_body),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -117,22 +119,22 @@ fun CompleteJobScreen(
                             .padding(Spacing.md)
                     ) {
                         Text(
-                            text = "Récapitulatif de l'intervention :",
+                            text = stringResource(R.string.complete_summary_title),
                             style = MaterialTheme.typography.labelMedium,
                             fontWeight = FontWeight.SemiBold,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         Spacer(modifier = Modifier.height(Spacing.xs))
                         SummaryRow(
-                            label = "Checklist validée",
+                            label = stringResource(R.string.complete_summary_checklist),
                             value = "${currentJob.completedChecklistCount} / ${currentJob.totalChecklistCount}"
                         )
                         SummaryRow(
-                            label = "Notes enregistrées",
+                            label = stringResource(R.string.complete_summary_notes),
                             value = "${currentJob.notes.size}"
                         )
                         SummaryRow(
-                            label = "Photos jointes",
+                            label = stringResource(R.string.complete_summary_photos),
                             value = "${currentJob.photos.size}"
                         )
                     }
@@ -142,14 +144,14 @@ fun CompleteJobScreen(
 
                 if (!canComplete) {
                     InlineMessage(
-                        text = "La clôture est disponible uniquement pour une intervention en cours avec tous les éléments obligatoires validés.",
+                        text = stringResource(R.string.complete_unavailable),
                         type = InlineMessageType.WARNING,
                         modifier = Modifier.padding(bottom = Spacing.md)
                     )
                 }
 
                 TervynPrimaryButton(
-                    text = "Terminer l'intervention",
+                    text = stringResource(R.string.action_complete_job),
                     onClick = {
                         val success = viewModel.completeJob(jobId)
                         if (success) {
@@ -164,7 +166,7 @@ fun CompleteJobScreen(
                 Spacer(modifier = Modifier.height(Spacing.md))
 
                 TervynSecondaryButton(
-                    text = "Annuler",
+                    text = stringResource(R.string.action_cancel),
                     onClick = onBackClick,
                     testTag = "cancel_complete_job_button"
                 )

@@ -10,8 +10,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import dev.amenokizele.tervyn.R
 import dev.amenokizele.tervyn.model.JobPriority
 import dev.amenokizele.tervyn.ui.theme.BadgeShape
 import dev.amenokizele.tervyn.ui.theme.Spacing
@@ -43,6 +45,12 @@ fun PriorityBadge(
             MaterialTheme.colorScheme.error.copy(alpha = 0.4f)
         )
     }
+    val label = when (priority) {
+        JobPriority.LOW -> stringResource(R.string.priority_low)
+        JobPriority.NORMAL -> stringResource(R.string.priority_normal)
+        JobPriority.HIGH -> stringResource(R.string.priority_high)
+        JobPriority.URGENT -> stringResource(R.string.priority_urgent)
+    }
 
     Box(
         modifier = modifier
@@ -52,7 +60,7 @@ fun PriorityBadge(
             .padding(horizontal = Spacing.xs, vertical = 2.dp)
     ) {
         Text(
-            text = priority.label,
+            text = label,
             style = MaterialTheme.typography.labelSmall,
             fontWeight = FontWeight.Medium,
             color = textColor

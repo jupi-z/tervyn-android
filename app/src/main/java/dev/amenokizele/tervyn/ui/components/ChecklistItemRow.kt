@@ -21,9 +21,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
+import dev.amenokizele.tervyn.R
 import dev.amenokizele.tervyn.model.DemoChecklistItem
 import dev.amenokizele.tervyn.ui.theme.BadgeShape
 import dev.amenokizele.tervyn.ui.theme.Spacing
@@ -82,7 +84,7 @@ fun ChecklistItemRow(
                         .padding(horizontal = Spacing.xs, vertical = 2.dp)
                 ) {
                     Text(
-                        text = "Obligatoire",
+                        text = stringResource(R.string.checklist_required),
                         style = MaterialTheme.typography.labelSmall,
                         fontWeight = FontWeight.Medium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant

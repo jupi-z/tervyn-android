@@ -18,9 +18,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import dev.amenokizele.tervyn.R
 import dev.amenokizele.tervyn.model.JobFilter
 import dev.amenokizele.tervyn.ui.theme.Spacing
 
@@ -41,6 +43,12 @@ fun TervynFilterTabs(
         JobFilter.entries.forEach { filter ->
             val isSelected = filter == selectedFilter
             val count = counts?.get(filter)
+            val filterLabel = when (filter) {
+                JobFilter.ALL -> stringResource(R.string.filter_all)
+                JobFilter.ASSIGNED -> stringResource(R.string.filter_assigned)
+                JobFilter.IN_PROGRESS -> stringResource(R.string.filter_in_progress)
+                JobFilter.COMPLETED -> stringResource(R.string.filter_completed)
+            }
 
             val backgroundColor = if (isSelected) {
                 MaterialTheme.colorScheme.primary
@@ -74,9 +82,9 @@ fun TervynFilterTabs(
                 contentAlignment = Alignment.Center
             ) {
                 val labelText = if (count != null) {
-                    "${filter.label} ($count)"
+                    stringResource(R.string.filter_with_count, filterLabel, count)
                 } else {
-                    filter.label
+                    filterLabel
                 }
 
                 Text(

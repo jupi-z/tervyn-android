@@ -15,7 +15,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import dev.amenokizele.tervyn.R
 import dev.amenokizele.tervyn.model.SyncState
 import dev.amenokizele.tervyn.ui.theme.Spacing
 
@@ -27,11 +29,17 @@ fun SyncStateIndicator(
 ) {
     if (syncState == SyncState.SYNCED && !showWhenSynced) return
 
+    val syncLabel = when (syncState) {
+        SyncState.SYNCED -> stringResource(R.string.sync_label_synced)
+        SyncState.PENDING -> stringResource(R.string.sync_label_pending)
+        SyncState.SYNCING -> stringResource(R.string.sync_label_syncing)
+        SyncState.FAILED -> stringResource(R.string.sync_label_failed)
+    }
     val (icon, color, label) = when (syncState) {
-        SyncState.SYNCED -> Triple(Icons.Default.CheckCircle, MaterialTheme.colorScheme.primary, "Synchronisé")
-        SyncState.PENDING -> Triple(Icons.Default.Schedule, MaterialTheme.colorScheme.tertiary, "En attente")
-        SyncState.SYNCING -> Triple(Icons.Default.Sync, MaterialTheme.colorScheme.tertiary, "En cours...")
-        SyncState.FAILED -> Triple(Icons.Default.ErrorOutline, MaterialTheme.colorScheme.error, "Échec de sync")
+        SyncState.SYNCED -> Triple(Icons.Default.CheckCircle, MaterialTheme.colorScheme.primary, syncLabel)
+        SyncState.PENDING -> Triple(Icons.Default.Schedule, MaterialTheme.colorScheme.tertiary, syncLabel)
+        SyncState.SYNCING -> Triple(Icons.Default.Sync, MaterialTheme.colorScheme.tertiary, syncLabel)
+        SyncState.FAILED -> Triple(Icons.Default.ErrorOutline, MaterialTheme.colorScheme.error, syncLabel)
     }
 
     Row(

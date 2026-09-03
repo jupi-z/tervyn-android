@@ -75,7 +75,7 @@ fun SyncScreen(
     Scaffold(
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
         topBar = {
-            TervynTopAppBar(title = "Synchronisation")
+            TervynTopAppBar(title = stringResource(R.string.title_sync))
         },
         snackbarHost = { SnackbarHost(snackbarHostState) },
         modifier = modifier
@@ -145,14 +145,22 @@ fun SyncContent(
                     Spacer(modifier = Modifier.width(Spacing.sm))
                     Column {
                         Text(
-                            text = if (isOffline) "Simulation hors connexion" else "Mode de démonstration",
+                            text = if (isOffline) {
+                                stringResource(R.string.sync_offline_title)
+                            } else {
+                                stringResource(R.string.sync_demo_title)
+                            },
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.SemiBold,
                             color = MaterialTheme.colorScheme.onSurface
                         )
                         Spacer(modifier = Modifier.height(2.dp))
                         Text(
-                            text = if (isOffline) "Aucun état réseau système n'est lu." else "Réseau simulé : en ligne",
+                            text = if (isOffline) {
+                                stringResource(R.string.sync_offline_no_system_network)
+                            } else {
+                                stringResource(R.string.sync_demo_network_online)
+                            },
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -196,7 +204,7 @@ fun SyncContent(
             Spacer(modifier = Modifier.height(Spacing.md))
 
             // Additional details - Flat Sections
-            SectionHeader(title = "Historique local")
+            SectionHeader(title = stringResource(R.string.sync_history_local))
             Spacer(modifier = Modifier.height(Spacing.xs))
 
             Row(
@@ -207,7 +215,7 @@ fun SyncContent(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "Dernière synchronisation",
+                    text = stringResource(R.string.sync_last_sync),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -227,12 +235,12 @@ fun SyncContent(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "Mode",
+                    text = stringResource(R.string.sync_mode_label),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Text(
-                    text = "Simulation UI",
+                    text = stringResource(R.string.sync_mode_ui_simulation),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurface
                 )
@@ -246,12 +254,12 @@ fun SyncContent(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "Synchronisation",
+                    text = stringResource(R.string.sync_mechanism_label),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Text(
-                    text = "Déclenchement manuel simulé",
+                    text = stringResource(R.string.sync_manual_simulated),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurface
                 )
@@ -278,14 +286,14 @@ private fun SyncedBlock(lastSyncTime: String) {
         )
         Spacer(modifier = Modifier.height(Spacing.md))
         Text(
-            text = "Tout est à jour",
+            text = stringResource(R.string.sync_up_to_date),
             style = MaterialTheme.typography.titleLarge,
             fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.onSurface
         )
         Spacer(modifier = Modifier.height(Spacing.xxs))
         Text(
-            text = "Toutes les modifications de démonstration sont marquées synchronisées.",
+            text = stringResource(R.string.sync_all_demo_marked_synced),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
@@ -304,7 +312,7 @@ private fun PendingBlock(pendingCount: Int, onSyncClick: () -> Unit) {
             )
             Spacer(modifier = Modifier.width(Spacing.xs))
             Text(
-                text = "$pendingCount modifications en attente",
+                text = stringResource(R.string.sync_pending_count, pendingCount),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onSurface
@@ -319,19 +327,19 @@ private fun PendingBlock(pendingCount: Int, onSyncClick: () -> Unit) {
                 .padding(vertical = Spacing.xs)
         ) {
             Text(
-                text = "• Changements de statut d'intervention",
+                text = stringResource(R.string.sync_pending_status_changes),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
             Spacer(modifier = Modifier.height(Spacing.xxs))
             Text(
-                text = "• Mises à jour checklist terrain",
+                text = stringResource(R.string.sync_pending_checklist_updates),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
             Spacer(modifier = Modifier.height(Spacing.xxs))
             Text(
-                text = "• Notes et photos ajoutées",
+                text = stringResource(R.string.sync_pending_notes_photos),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -340,7 +348,7 @@ private fun PendingBlock(pendingCount: Int, onSyncClick: () -> Unit) {
         Spacer(modifier = Modifier.height(Spacing.lg))
 
         TervynPrimaryButton(
-            text = "Synchroniser maintenant",
+            text = stringResource(R.string.sync_now),
             onClick = onSyncClick,
             icon = Icons.Default.Sync,
             testTag = "sync_now_button"
@@ -364,14 +372,14 @@ private fun SyncingBlock() {
         )
         Spacer(modifier = Modifier.height(Spacing.md))
         Text(
-            text = "Synchronisation en cours",
+            text = stringResource(R.string.sync_in_progress_title),
             style = MaterialTheme.typography.titleLarge,
             fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.onSurface
         )
         Spacer(modifier = Modifier.height(Spacing.xxs))
         Text(
-            text = "Simulation de traitement des modifications locales...",
+            text = stringResource(R.string.sync_in_progress_body),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
@@ -381,7 +389,7 @@ private fun SyncingBlock() {
         )
         Spacer(modifier = Modifier.height(Spacing.xs))
         Text(
-            text = "Envoi des données en cours",
+            text = stringResource(R.string.sync_upload_in_progress),
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
@@ -392,13 +400,13 @@ private fun SyncingBlock() {
 private fun FailedBlock(error: String, onRetry: () -> Unit) {
     Column(modifier = Modifier.fillMaxWidth()) {
         InlineMessage(
-            text = "Certaines modifications n'ont pas pu être synchronisées : $error",
+            text = stringResource(R.string.sync_failed_with_error, error),
             type = InlineMessageType.ERROR,
             modifier = Modifier.padding(bottom = Spacing.md)
         )
 
         TervynPrimaryButton(
-            text = "Réessayer",
+            text = stringResource(R.string.action_retry),
             onClick = onRetry,
             icon = Icons.Default.Refresh,
             testTag = "retry_sync_button"

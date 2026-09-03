@@ -25,9 +25,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import dev.amenokizele.tervyn.R
 import dev.amenokizele.tervyn.model.JobStatus
 import dev.amenokizele.tervyn.model.ThemeMode
 import dev.amenokizele.tervyn.ui.components.InlineMessage
@@ -59,7 +61,7 @@ fun AddNoteScreen(
     Scaffold(
         topBar = {
             TervynTopAppBar(
-                title = "Nouvelle note",
+                title = stringResource(R.string.title_add_note),
                 subtitle = job?.reference,
                 onBackClick = onBackClick
             )
@@ -83,13 +85,13 @@ fun AddNoteScreen(
                     .testTag("add_note_screen_content")
             ) {
                 Text(
-                    text = "Observations terrain",
+                    text = stringResource(R.string.add_note_heading),
                     style = MaterialTheme.typography.titleMedium,
                     color = MaterialTheme.colorScheme.onSurface
                 )
                 Spacer(modifier = Modifier.height(Spacing.xxs))
                 Text(
-                    text = "Ajoutez une note d'intervention. Elle sera horodatée et marquée en attente de synchronisation simulée.",
+                    text = stringResource(R.string.add_note_body),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -98,7 +100,7 @@ fun AddNoteScreen(
 
                 if (!canEdit) {
                     InlineMessage(
-                        text = "Les notes peuvent être ajoutées uniquement pendant une intervention en cours.",
+                        text = stringResource(R.string.add_note_readonly),
                         type = InlineMessageType.WARNING,
                         modifier = Modifier.padding(bottom = Spacing.md)
                     )
@@ -110,13 +112,13 @@ fun AddNoteScreen(
                         noteContent = it
                         if (isError && it.isNotBlank()) isError = false
                     },
-                    label = "Détails de la note",
-                    placeholder = "Saisissez les détails de l'opération, matériel utilisé ou anomalies constatées...",
+                    label = stringResource(R.string.add_note_label),
+                    placeholder = stringResource(R.string.add_note_placeholder),
                     singleLine = false,
                     minLines = 5,
                     maxLines = 10,
                     isError = isError,
-                    errorMessage = "Veuillez saisir du texte pour ajouter cette note.",
+                    errorMessage = stringResource(R.string.add_note_error_empty),
                     enabled = canEdit,
                     testTag = "note_content_input"
                 )
@@ -124,7 +126,7 @@ fun AddNoteScreen(
                 Spacer(modifier = Modifier.height(Spacing.xl))
 
                 TervynPrimaryButton(
-                    text = "Ajouter la note",
+                    text = stringResource(R.string.action_add_note),
                     onClick = {
                         if (noteContent.isBlank()) {
                             isError = true
@@ -139,7 +141,7 @@ fun AddNoteScreen(
                 Spacer(modifier = Modifier.height(Spacing.md))
 
                 TervynSecondaryButton(
-                    text = "Annuler",
+                    text = stringResource(R.string.action_cancel),
                     onClick = onBackClick,
                     testTag = "cancel_note_button"
                 )

@@ -25,10 +25,12 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import dev.amenokizele.tervyn.R
 import dev.amenokizele.tervyn.demo.DemoData
 import dev.amenokizele.tervyn.model.DemoJob
 import dev.amenokizele.tervyn.model.JobFilter
@@ -105,12 +107,12 @@ fun JobsContent(
                 ) {
                     Column {
                         Text(
-                            text = "Bonjour, Amina",
+                            text = stringResource(R.string.jobs_greeting),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         Text(
-                            text = "Interventions",
+                            text = stringResource(R.string.title_jobs),
                             style = MaterialTheme.typography.titleLarge,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onSurface
@@ -119,12 +121,12 @@ fun JobsContent(
 
                     Column(horizontalAlignment = Alignment.End) {
                         Text(
-                            text = "Aujourd'hui",
+                            text = stringResource(R.string.jobs_today_label),
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         Text(
-                            text = "02 septembre",
+                            text = stringResource(R.string.jobs_demo_date),
                             style = MaterialTheme.typography.titleSmall,
                             fontWeight = FontWeight.SemiBold,
                             color = MaterialTheme.colorScheme.onSurface
@@ -149,7 +151,7 @@ fun JobsContent(
                     TervynSearchBar(
                         query = searchQuery,
                         onQueryChange = onSearchQueryChange,
-                        placeholder = "Rechercher une intervention...",
+                        placeholder = stringResource(R.string.jobs_search_placeholder),
                         onClear = onClearSearch
                     )
                 }
@@ -181,11 +183,11 @@ fun JobsContent(
         ) {
             if (jobs.isEmpty()) {
                 EmptyState(
-                    title = "Aucune intervention",
+                    title = stringResource(R.string.jobs_empty_title),
                     description = if (searchQuery.isNotBlank()) {
-                        "Aucun résultat pour « $searchQuery »."
+                        stringResource(R.string.jobs_empty_search, searchQuery)
                     } else {
-                        "Vous n'avez aucune intervention correspondant à ce filtre."
+                        stringResource(R.string.jobs_empty_filtered)
                     },
                     modifier = Modifier.fillMaxSize()
                 )

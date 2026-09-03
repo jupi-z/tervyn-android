@@ -12,9 +12,11 @@ import kotlinx.coroutines.launch
 sealed interface LoginUiState {
     data object Idle : LoginUiState
     data object Loading : LoginUiState
-    data class InvalidCredentials(val message: String = "Email ou mot de passe incorrect.") : LoginUiState
-    data class NetworkUnavailable(val message: String = "Connexion indisponible. Vérifiez votre réseau et réessayez.") : LoginUiState
-    data class ServerError(val message: String = "Le service est momentanément indisponible.") : LoginUiState
+    data object InvalidCredentials : LoginUiState
+    data object InvalidEmail : LoginUiState
+    data object EmptyPassword : LoginUiState
+    data object NetworkUnavailable : LoginUiState
+    data object ServerError : LoginUiState
     data object Authenticated : LoginUiState
 }
 
@@ -55,12 +57,12 @@ class LoginViewModel : ViewModel() {
         val currentPassword = _password.value
 
         if (trimmedEmail.isEmpty() || !trimmedEmail.contains("@")) {
-            _uiState.value = LoginUiState.InvalidCredentials("Veuillez saisir une adresse email valide.")
+            _uiState.value = LoginUiState.InvalidEmail
             return
         }
 
         if (currentPassword.isEmpty()) {
-            _uiState.value = LoginUiState.InvalidCredentials("Veuillez saisir votre mot de passe.")
+            _uiState.value = LoginUiState.EmptyPassword
             return
         }
 
@@ -70,7 +72,7 @@ class LoginViewModel : ViewModel() {
 
             if (DemoRepository.isOffline.value) {
                 // If in simulated offline mode
-                _uiState.value = LoginUiState.NetworkUnavailable()
+                _uiState.value = LoginUiState.NetworkUnavailable
                 return@launch
             }
 

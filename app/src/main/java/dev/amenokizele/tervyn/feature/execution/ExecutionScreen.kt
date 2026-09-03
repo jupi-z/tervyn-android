@@ -29,10 +29,12 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import dev.amenokizele.tervyn.R
 import dev.amenokizele.tervyn.demo.DemoData
 import dev.amenokizele.tervyn.model.DemoJob
 import dev.amenokizele.tervyn.model.JobStatus
@@ -69,7 +71,7 @@ fun ExecutionScreen(
     Scaffold(
         topBar = {
             TervynTopAppBar(
-                title = "Exécution",
+                title = stringResource(R.string.title_execution),
                 subtitle = job?.reference,
                 onBackClick = onBackClick
             )
@@ -78,8 +80,8 @@ fun ExecutionScreen(
     ) { innerPadding ->
         if (job == null) {
             EmptyState(
-                title = "Intervention introuvable",
-                description = "Impossible de charger les données d'exécution.",
+                title = stringResource(R.string.title_job_not_found),
+                description = stringResource(R.string.execution_not_found_description),
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(innerPadding)
@@ -145,7 +147,7 @@ fun ExecutionContent(
 
             // SECTION 1 : CHECKLIST
             SectionHeader(
-                title = "Checklist",
+                title = stringResource(R.string.label_checklist),
                 trailingText = "${job.completedChecklistCount}/${job.totalChecklistCount}"
             )
 
@@ -168,7 +170,7 @@ fun ExecutionContent(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 SectionHeader(
-                    title = "Notes",
+                    title = stringResource(R.string.label_notes),
                     trailingText = "${job.notes.size}",
                     modifier = Modifier.weight(1f)
                 )
@@ -180,14 +182,14 @@ fun ExecutionContent(
                     ) {
                         Icon(imageVector = Icons.Default.Add, contentDescription = null)
                         Spacer(modifier = Modifier.height(Spacing.xxs))
-                        Text("Ajouter une note")
+                        Text(stringResource(R.string.action_add_note_short))
                     }
                 }
             }
 
             if (job.notes.isEmpty()) {
                 Text(
-                    text = "Aucune note ajoutée",
+                    text = stringResource(R.string.notes_empty),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(vertical = Spacing.sm)
@@ -207,7 +209,7 @@ fun ExecutionContent(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 SectionHeader(
-                    title = "Photos",
+                    title = stringResource(R.string.label_photos),
                     trailingText = "${job.photos.size}",
                     modifier = Modifier.weight(1f)
                 )
@@ -219,14 +221,14 @@ fun ExecutionContent(
                     ) {
                         Icon(imageVector = Icons.Default.Add, contentDescription = null)
                         Spacer(modifier = Modifier.height(Spacing.xxs))
-                        Text("Ajouter")
+                        Text(stringResource(R.string.action_add_photo_short))
                     }
                 }
             }
 
             if (job.photos.isEmpty()) {
                 Text(
-                    text = "Aucune photo ajoutée",
+                    text = stringResource(R.string.photos_empty),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(vertical = Spacing.sm)
@@ -262,14 +264,14 @@ fun ExecutionContent(
             if (isEditable) {
                 if (!canComplete) {
                     InlineMessage(
-                        text = "Complétez les éléments obligatoires avant de terminer.",
+                        text = stringResource(R.string.execution_required_warning),
                         type = InlineMessageType.WARNING,
                         modifier = Modifier.padding(bottom = Spacing.md)
                     )
                 }
 
                 TervynPrimaryButton(
-                    text = "Terminer l'intervention",
+                    text = stringResource(R.string.action_complete_job),
                     onClick = onCompleteClick,
                     enabled = canComplete,
                     icon = Icons.Default.CheckCircle,
@@ -277,7 +279,10 @@ fun ExecutionContent(
                 )
             } else if (job.status == JobStatus.COMPLETED) {
                 InlineMessage(
-                    text = "Intervention terminée le 02 septembre · ${job.completedAt ?: "11:30"}. En lecture seule.",
+                    text = stringResource(
+                        R.string.execution_completed_readonly,
+                        job.completedAt ?: stringResource(R.string.execution_completed_fallback_time)
+                    ),
                     type = InlineMessageType.SUCCESS
                 )
             }

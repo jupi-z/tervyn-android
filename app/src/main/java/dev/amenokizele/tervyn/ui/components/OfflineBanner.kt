@@ -26,9 +26,10 @@ import dev.amenokizele.tervyn.ui.theme.Spacing
 @Composable
 fun OfflineBanner(
     modifier: Modifier = Modifier,
-    text: String = "Hors connexion — dernières données disponibles"
+    text: String? = null
 ) {
     val offlineLabel = stringResource(R.string.cd_offline_simulation)
+    val bannerText = text ?: stringResource(R.string.offline_banner_default)
 
     Row(
         modifier = modifier
@@ -47,7 +48,7 @@ fun OfflineBanner(
         )
         Spacer(modifier = Modifier.width(Spacing.xs))
         Text(
-            text = text,
+            text = bannerText,
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )

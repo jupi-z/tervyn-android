@@ -87,10 +87,10 @@ fun PhotoViewerScreen(
     ) {
         if (photo == null) {
             EmptyState(
-                title = "Photo introuvable",
-                description = "Cette photo n'existe pas ou a été supprimée.",
+                title = stringResource(R.string.title_photo_not_found),
+                description = stringResource(R.string.photo_not_found_description),
                 action = {
-                    TervynPrimaryButton(text = "Retour", onClick = onBackClick)
+                    TervynPrimaryButton(text = backLabel, onClick = onBackClick)
                 },
                 modifier = Modifier.align(Alignment.Center)
             )
@@ -166,7 +166,7 @@ fun PhotoViewerScreen(
                             )
                             Spacer(modifier = Modifier.height(Spacing.md))
                             Text(
-                                text = "[ ${photo.placeholderTag} ]",
+                                text = stringResource(R.string.photo_placeholder, photo.placeholderTag),
                                 style = MaterialTheme.typography.titleMedium,
                                 color = Color(0xFFE8F0EC),
                                 fontWeight = FontWeight.Bold
@@ -190,14 +190,14 @@ fun PhotoViewerScreen(
                 ) {
                     if (isConfirmingDelete && canDelete) {
                         Text(
-                            text = "Confirmer la suppression de cette photo ?",
+                            text = stringResource(R.string.photo_delete_confirm_title),
                             style = MaterialTheme.typography.titleSmall,
                             color = Color.White,
                             fontWeight = FontWeight.SemiBold
                         )
                         Spacer(modifier = Modifier.height(Spacing.xs))
                         Text(
-                            text = "Cette action retirera le fichier de l'intervention locale.",
+                            text = stringResource(R.string.photo_delete_confirm_body),
                             style = MaterialTheme.typography.bodySmall,
                             color = Color(0xFFAAB7B0)
                         )
@@ -211,7 +211,7 @@ fun PhotoViewerScreen(
                                 shape = ButtonShape,
                                 modifier = Modifier.weight(1f)
                             ) {
-                                Text("Annuler", color = Color.White)
+                                Text(stringResource(R.string.action_cancel), color = Color.White)
                             }
                             OutlinedButton(
                                 onClick = {
@@ -238,12 +238,12 @@ fun PhotoViewerScreen(
                         ) {
                             Column {
                                 Text(
-                                    text = "Prise de vue",
+                                    text = stringResource(R.string.photo_capture_label),
                                     style = MaterialTheme.typography.labelSmall,
                                     color = Color(0xFFAAB7B0)
                                 )
                                 Text(
-                                    text = "02 septembre · ${photo.createdAt}",
+                                    text = stringResource(R.string.date_demo_september_02, photo.createdAt),
                                     style = MaterialTheme.typography.bodyMedium,
                                     color = Color.White,
                                     fontWeight = FontWeight.Medium

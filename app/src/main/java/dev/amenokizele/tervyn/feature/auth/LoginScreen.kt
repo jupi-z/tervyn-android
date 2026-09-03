@@ -32,6 +32,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
@@ -41,6 +42,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import dev.amenokizele.tervyn.R
 import dev.amenokizele.tervyn.model.ThemeMode
 import dev.amenokizele.tervyn.ui.components.InlineMessage
 import dev.amenokizele.tervyn.ui.components.InlineMessageType
@@ -104,7 +106,7 @@ fun LoginContent(
         ) {
             // Header
             Text(
-                text = "TERVYN",
+                text = stringResource(R.string.title_login_brand),
                 style = MaterialTheme.typography.headlineSmall,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.primary,
@@ -114,45 +116,40 @@ fun LoginContent(
             Spacer(modifier = Modifier.height(Spacing.xs))
 
             Text(
-                text = "Field operations,\nwherever work happens.",
+                text = stringResource(R.string.login_tagline),
                 style = MaterialTheme.typography.titleMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
 
             Spacer(modifier = Modifier.height(Spacing.xl))
 
-            // Error banner if any
-            when (uiState) {
-                is LoginUiState.InvalidCredentials -> {
-                    InlineMessage(
-                        text = uiState.message,
-                        type = InlineMessageType.ERROR,
-                        modifier = Modifier.padding(bottom = Spacing.md)
-                    )
-                }
-                is LoginUiState.NetworkUnavailable -> {
-                    InlineMessage(
-                        text = uiState.message,
-                        type = InlineMessageType.WARNING,
-                        modifier = Modifier.padding(bottom = Spacing.md)
-                    )
-                }
-                is LoginUiState.ServerError -> {
-                    InlineMessage(
-                        text = uiState.message,
-                        type = InlineMessageType.ERROR,
-                        modifier = Modifier.padding(bottom = Spacing.md)
-                    )
-                }
-                else -> Unit
+            val errorMessage = when (uiState) {
+                LoginUiState.InvalidCredentials -> stringResource(R.string.login_error_invalid_credentials)
+                LoginUiState.InvalidEmail -> stringResource(R.string.login_error_invalid_email)
+                LoginUiState.EmptyPassword -> stringResource(R.string.login_error_empty_password)
+                LoginUiState.NetworkUnavailable -> stringResource(R.string.login_error_offline)
+                LoginUiState.ServerError -> stringResource(R.string.login_error_server)
+                else -> null
+            }
+            val messageType = if (uiState == LoginUiState.NetworkUnavailable) {
+                InlineMessageType.WARNING
+            } else {
+                InlineMessageType.ERROR
+            }
+            if (errorMessage != null) {
+                InlineMessage(
+                    text = errorMessage,
+                    type = messageType,
+                    modifier = Modifier.padding(bottom = Spacing.md)
+                )
             }
 
             // Email field
             TervynOutlinedTextField(
                 value = email,
                 onValueChange = onEmailChange,
-                label = "Email",
-                placeholder = "amina@tervyn.demo",
+                label = stringResource(R.string.login_email_label),
+                placeholder = stringResource(R.string.login_demo_email),
                 leadingIcon = {
                     Icon(
                         imageVector = Icons.Default.Email,
@@ -173,8 +170,8 @@ fun LoginContent(
             TervynOutlinedTextField(
                 value = password,
                 onValueChange = onPasswordChange,
-                label = "Mot de passe",
-                placeholder = "••••••••",
+                label = stringResource(R.string.login_password_label),
+                placeholder = stringResource(R.string.login_password_placeholder),
                 leadingIcon = {
                     Icon(
                         imageVector = Icons.Default.Lock,
@@ -189,7 +186,11 @@ fun LoginContent(
                     ) {
                         Icon(
                             imageVector = if (isPasswordVisible) Icons.Default.VisibilityOff else Icons.Default.Visibility,
-                            contentDescription = if (isPasswordVisible) "Masquer le mot de passe" else "Afficher le mot de passe",
+                            contentDescription = if (isPasswordVisible) {
+                                stringResource(R.string.cd_password_hide)
+                            } else {
+                                stringResource(R.string.cd_password_show)
+                            },
                             tint = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
@@ -207,7 +208,7 @@ fun LoginContent(
 
             // Submit Button
             TervynPrimaryButton(
-                text = "Se connecter",
+                text = stringResource(R.string.action_login),
                 onClick = onLoginClick,
                 isLoading = uiState is LoginUiState.Loading,
                 testTag = "login_submit_button"
@@ -241,7 +242,7 @@ private fun LoginScreenPreviewDark() {
             email = "amina@tervyn.demo",
             password = "password",
             isPasswordVisible = false,
-            uiState = LoginUiState.InvalidCredentials(),
+            uiState = LoginUiState.InvalidCredentials,
             onEmailChange = {},
             onPasswordChange = {},
             onTogglePasswordVisibility = {},

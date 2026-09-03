@@ -44,6 +44,8 @@ import dev.amenokizele.tervyn.ui.components.BottomBarDestination
 import dev.amenokizele.tervyn.ui.components.TervynBottomNavigation
 import kotlinx.coroutines.launch
 
+private const val TERVYN_ROOT_GRAPH_ROUTE = "tervyn_root"
+
 @Composable
 fun TervynNavGraph(
     navController: NavHostController,
@@ -94,6 +96,7 @@ fun TervynNavGraph(
         NavHost(
             navController = navController,
             startDestination = TervynDestination.Bootstrap.route,
+            route = TERVYN_ROOT_GRAPH_ROUTE,
             modifier = Modifier
                 .fillMaxSize()
                 .padding(bottom = innerPadding.calculateBottomPadding()),
@@ -259,7 +262,12 @@ fun TervynNavGraph(
                     onBackClick = { navController.popBackStack() },
                     onConfirmLogout = {
                         navController.navigate(TervynDestination.Login.route) {
-                            popUpTo(0) { inclusive = true }
+                            popUpTo(TERVYN_ROOT_GRAPH_ROUTE) {
+                                inclusive = false
+                                saveState = false
+                            }
+                            launchSingleTop = true
+                            restoreState = false
                         }
                         scope.launch {
                             snackbarHostState.showSnackbar(loggedOutMessage)

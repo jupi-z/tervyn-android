@@ -16,17 +16,21 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import dev.amenokizele.tervyn.R
 import dev.amenokizele.tervyn.ui.theme.Spacing
 
 @Composable
 fun ErrorState(
     message: String,
     modifier: Modifier = Modifier,
-    title: String = "Une erreur est survenue",
+    title: String? = null,
     onRetry: (() -> Unit)? = null
 ) {
+    val resolvedTitle = title ?: stringResource(R.string.error_state_title)
+
     Column(
         modifier = modifier
             .fillMaxWidth()
@@ -45,7 +49,7 @@ fun ErrorState(
         Spacer(modifier = Modifier.height(Spacing.md))
 
         Text(
-            text = title,
+            text = resolvedTitle,
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.SemiBold,
             color = MaterialTheme.colorScheme.onSurface,
@@ -64,7 +68,7 @@ fun ErrorState(
         if (onRetry != null) {
             Spacer(modifier = Modifier.height(Spacing.md))
             TervynSecondaryButton(
-                text = "Réessayer",
+                text = stringResource(R.string.action_retry),
                 onClick = onRetry,
                 testTag = "error_retry_button"
             )

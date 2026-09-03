@@ -72,7 +72,7 @@ fun JobDetailScreen(
     Scaffold(
         topBar = {
             TervynTopAppBar(
-                title = "Intervention",
+                title = stringResource(R.string.title_job_detail),
                 subtitle = job?.reference,
                 onBackClick = onBackClick
             )
@@ -82,8 +82,8 @@ fun JobDetailScreen(
     ) { innerPadding ->
         if (job == null) {
             EmptyState(
-                title = "Intervention introuvable",
-                description = "Cette intervention n'existe pas ou a été supprimée.",
+                title = stringResource(R.string.title_job_not_found),
+                description = stringResource(R.string.job_not_found_description),
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(innerPadding)
@@ -113,6 +113,12 @@ fun JobDetailContent(
     onContinueJob: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val syncDescription = when (job.syncState) {
+        dev.amenokizele.tervyn.model.SyncState.SYNCED -> stringResource(R.string.sync_state_synced_detail)
+        dev.amenokizele.tervyn.model.SyncState.PENDING -> stringResource(R.string.sync_state_pending_detail)
+        dev.amenokizele.tervyn.model.SyncState.SYNCING -> stringResource(R.string.sync_state_syncing_detail)
+        dev.amenokizele.tervyn.model.SyncState.FAILED -> stringResource(R.string.sync_state_failed_detail)
+    }
     Box(
         modifier = modifier
             .fillMaxSize()
@@ -161,36 +167,31 @@ fun JobDetailContent(
             Spacer(modifier = Modifier.height(Spacing.md))
 
             // Information fields
-            DetailSection(label = "Client", value = job.clientName)
-            DetailSection(label = "Site", value = job.siteName)
-            DetailSection(label = "Adresse", value = job.siteAddress)
-            DetailSection(label = "Prévue", value = "02 septembre · ${job.scheduledAt}")
+            DetailSection(label = stringResource(R.string.label_client), value = job.clientName)
+            DetailSection(label = stringResource(R.string.label_site), value = job.siteName)
+            DetailSection(label = stringResource(R.string.label_address), value = job.siteAddress)
+            DetailSection(label = stringResource(R.string.label_scheduled), value = stringResource(R.string.date_demo_september_02, job.scheduledAt))
 
             if (job.startedAt != null) {
-                DetailSection(label = "Démarrée", value = "02 septembre · ${job.startedAt}")
+                DetailSection(label = stringResource(R.string.label_started), value = stringResource(R.string.date_demo_september_02, job.startedAt))
             }
             if (job.completedAt != null) {
-                DetailSection(label = "Terminée", value = "02 septembre · ${job.completedAt}")
+                DetailSection(label = stringResource(R.string.label_completed), value = stringResource(R.string.date_demo_september_02, job.completedAt))
             }
 
-            DetailSection(label = "Description", value = job.description)
+            DetailSection(label = stringResource(R.string.label_description), value = job.description)
 
             // Checklist summary
             SectionHeader(
-                title = "Checklist",
-                trailingText = "${job.completedChecklistCount} / ${job.totalChecklistCount} terminées"
+                title = stringResource(R.string.label_checklist),
+                trailingText = stringResource(R.string.checklist_completed_count, job.completedChecklistCount, job.totalChecklistCount)
             )
             Spacer(modifier = Modifier.height(Spacing.xs))
 
             // Synchronisation
-            SectionHeader(title = "Synchronisation")
+            SectionHeader(title = stringResource(R.string.title_sync))
             Text(
-                text = when (job.syncState) {
-                    dev.amenokizele.tervyn.model.SyncState.SYNCED -> "Toutes les modifications sont synchronisées."
-                    dev.amenokizele.tervyn.model.SyncState.PENDING -> "Modifications locales en attente de synchronisation."
-                    dev.amenokizele.tervyn.model.SyncState.SYNCING -> "Synchronisation simulée en cours..."
-                    dev.amenokizele.tervyn.model.SyncState.FAILED -> "Échec de synchronisation. Réessai requis."
-                },
+                text = syncDescription,
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -201,7 +202,7 @@ fun JobDetailContent(
             when (job.status) {
                 JobStatus.ASSIGNED -> {
                     TervynPrimaryButton(
-                        text = "Démarrer l'intervention",
+                        text = stringResource(R.string.action_start_job),
                         onClick = onStartJob,
                         icon = Icons.Default.PlayArrow,
                         testTag = "start_job_button"
@@ -209,14 +210,14 @@ fun JobDetailContent(
                 }
                 JobStatus.IN_PROGRESS -> {
                     TervynPrimaryButton(
-                        text = "Continuer l'intervention",
+                        text = stringResource(R.string.action_continue_job),
                         onClick = onContinueJob,
                         testTag = "continue_job_button"
                     )
                 }
                 JobStatus.COMPLETED -> {
                     TervynSecondaryButton(
-                        text = "Consulter l'exécution (Terminée)",
+                        text = stringResource(R.string.action_view_completed_job),
                         onClick = onContinueJob,
                         testTag = "view_completed_job_button"
                     )

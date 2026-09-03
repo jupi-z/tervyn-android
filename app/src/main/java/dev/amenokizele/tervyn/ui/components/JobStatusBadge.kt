@@ -10,8 +10,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import dev.amenokizele.tervyn.R
 import dev.amenokizele.tervyn.model.JobStatus
 import dev.amenokizele.tervyn.ui.theme.BadgeShape
 import dev.amenokizele.tervyn.ui.theme.Spacing
@@ -38,6 +40,11 @@ fun JobStatusBadge(
             MaterialTheme.colorScheme.primary.copy(alpha = 0.4f)
         )
     }
+    val label = when (status) {
+        JobStatus.ASSIGNED -> stringResource(R.string.status_assigned)
+        JobStatus.IN_PROGRESS -> stringResource(R.string.status_in_progress)
+        JobStatus.COMPLETED -> stringResource(R.string.status_completed)
+    }
 
     Box(
         modifier = modifier
@@ -47,7 +54,7 @@ fun JobStatusBadge(
             .padding(horizontal = Spacing.xs, vertical = 2.dp)
     ) {
         Text(
-            text = status.label,
+            text = label,
             style = MaterialTheme.typography.labelSmall,
             fontWeight = FontWeight.Medium,
             color = textColor

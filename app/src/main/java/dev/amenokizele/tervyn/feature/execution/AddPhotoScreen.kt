@@ -37,10 +37,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import dev.amenokizele.tervyn.R
 import dev.amenokizele.tervyn.model.JobStatus
 import dev.amenokizele.tervyn.model.ThemeMode
 import dev.amenokizele.tervyn.ui.components.InlineMessage
@@ -61,7 +63,8 @@ fun AddPhotoScreen(
     viewModel: ExecutionViewModel = viewModel()
 ) {
     val job by viewModel.job.collectAsState()
-    var photoTitle by remember { mutableStateOf("Photo équipement") }
+    val initialPhotoTitle = stringResource(R.string.add_photo_default_title)
+    var photoTitle by remember { mutableStateOf(initialPhotoTitle) }
     var selectedTag by remember { mutableStateOf("CABLING") }
     var selectedSource by remember { mutableStateOf("CAMERA") }
     val canEdit = job?.status == JobStatus.IN_PROGRESS
@@ -73,7 +76,7 @@ fun AddPhotoScreen(
     Scaffold(
         topBar = {
             TervynTopAppBar(
-                title = "Ajouter une photo",
+                title = stringResource(R.string.title_add_photo),
                 subtitle = job?.reference,
                 onBackClick = onBackClick
             )
@@ -96,7 +99,7 @@ fun AddPhotoScreen(
                     .testTag("add_photo_screen_content")
             ) {
                 Text(
-                    text = "Source de la photo",
+                    text = stringResource(R.string.add_photo_source_title),
                     style = MaterialTheme.typography.titleMedium,
                     color = MaterialTheme.colorScheme.onSurface
                 )
@@ -104,11 +107,15 @@ fun AddPhotoScreen(
 
                 if (!canEdit) {
                     InlineMessage(
-                        text = "Les photos peuvent être ajoutées uniquement pendant une intervention en cours.",
+                        text = stringResource(R.string.add_photo_readonly),
                         type = InlineMessageType.WARNING,
                         modifier = Modifier.padding(bottom = Spacing.md)
                     )
                 }
+
+                val defaultFieldPhotoTitle = stringResource(R.string.add_photo_default_field)
+                val defaultGalleryPhotoTitle = stringResource(R.string.add_photo_default_gallery)
+                val defaultPhotoTitle = stringResource(R.string.add_photo_default_title)
 
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -116,23 +123,23 @@ fun AddPhotoScreen(
                 ) {
                     SourceTile(
                         icon = Icons.Default.CameraAlt,
-                        label = "Prendre une photo",
+                        label = stringResource(R.string.add_photo_take),
                         isSelected = selectedSource == "CAMERA",
                         enabled = canEdit,
                         onClick = {
                             selectedSource = "CAMERA"
-                            if (photoTitle.isBlank()) photoTitle = "Photo terrain"
+                            if (photoTitle.isBlank()) photoTitle = defaultFieldPhotoTitle
                         },
                         modifier = Modifier.weight(1f)
                     )
                     SourceTile(
                         icon = Icons.Default.PhotoLibrary,
-                        label = "Choisir de la galerie",
+                        label = stringResource(R.string.add_photo_gallery),
                         isSelected = selectedSource == "GALLERY",
                         enabled = canEdit,
                         onClick = {
                             selectedSource = "GALLERY"
-                            if (photoTitle.isBlank()) photoTitle = "Document d'intervention"
+                            if (photoTitle.isBlank()) photoTitle = defaultGalleryPhotoTitle
                         },
                         modifier = Modifier.weight(1f)
                     )
@@ -141,17 +148,17 @@ fun AddPhotoScreen(
                 Spacer(modifier = Modifier.height(Spacing.lg))
 
                 Text(
-                    text = "Catégorie",
+                    text = stringResource(R.string.add_photo_category_title),
                     style = MaterialTheme.typography.titleMedium,
                     color = MaterialTheme.colorScheme.onSurface
                 )
                 Spacer(modifier = Modifier.height(Spacing.xs))
 
                 val categories = listOf(
-                    "CABLING" to "Câblage & Connectique",
-                    "DEVICE" to "Équipement & Châssis",
-                    "ENVIRONMENT" to "Environnement / Salle",
-                    "REPORT" to "Compte-rendu d'état"
+                    "CABLING" to stringResource(R.string.add_photo_category_cabling),
+                    "DEVICE" to stringResource(R.string.add_photo_category_device),
+                    "ENVIRONMENT" to stringResource(R.string.add_photo_category_environment),
+                    "REPORT" to stringResource(R.string.add_photo_category_report)
                 )
 
                 Column(verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
@@ -190,8 +197,8 @@ fun AddPhotoScreen(
                 TervynOutlinedTextField(
                     value = photoTitle,
                     onValueChange = { photoTitle = it },
-                    label = "Légende de la photo",
-                    placeholder = "Ex : Raccordement câble d'alimentation",
+                    label = stringResource(R.string.add_photo_caption_label),
+                    placeholder = stringResource(R.string.add_photo_caption_placeholder),
                     singleLine = true,
                     enabled = canEdit,
                     testTag = "photo_title_input"
@@ -200,9 +207,9 @@ fun AddPhotoScreen(
                 Spacer(modifier = Modifier.height(Spacing.xl))
 
                 TervynPrimaryButton(
-                    text = "Enregistrer la photo",
+                    text = stringResource(R.string.action_add_photo),
                     onClick = {
-                        if (viewModel.addPhoto(jobId, photoTitle.ifBlank { "Photo terrain" }, selectedTag)) {
+                        if (viewModel.addPhoto(jobId, photoTitle.ifBlank { defaultPhotoTitle }, selectedTag)) {
                             onPhotoAdded()
                         }
                     },
@@ -213,7 +220,7 @@ fun AddPhotoScreen(
                 Spacer(modifier = Modifier.height(Spacing.md))
 
                 TervynSecondaryButton(
-                    text = "Annuler",
+                    text = stringResource(R.string.action_cancel),
                     onClick = onBackClick,
                     testTag = "cancel_photo_button"
                 )

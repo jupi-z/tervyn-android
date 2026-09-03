@@ -22,11 +22,13 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import dev.amenokizele.tervyn.R
 import dev.amenokizele.tervyn.model.ThemeMode
 import dev.amenokizele.tervyn.ui.theme.Spacing
 import dev.amenokizele.tervyn.ui.theme.TervynTheme
@@ -62,7 +64,7 @@ fun BootstrapScreen(
                 verticalArrangement = Arrangement.Center
             ) {
                 Text(
-                    text = "TERVYN",
+                    text = stringResource(R.string.title_login_brand),
                     style = MaterialTheme.typography.headlineMedium,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.primary,
@@ -71,7 +73,7 @@ fun BootstrapScreen(
                 )
                 Spacer(modifier = Modifier.height(Spacing.xs))
                 Text(
-                    text = "Field operations",
+                    text = stringResource(R.string.bootstrap_tagline),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     letterSpacing = 1.sp,

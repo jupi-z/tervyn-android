@@ -1,10 +1,10 @@
 package dev.amenokizele.tervyn.model
 
-enum class JobFilter(val label: String) {
-    ALL("Toutes"),
-    ASSIGNED("À faire"),
-    IN_PROGRESS("En cours"),
-    COMPLETED("Terminées")
+enum class JobFilter {
+    ALL,
+    ASSIGNED,
+    IN_PROGRESS,
+    COMPLETED
 }
 
 sealed interface UiState<out T> {

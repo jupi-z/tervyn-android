@@ -38,13 +38,14 @@ fun TervynSearchBar(
     query: String,
     onQueryChange: (String) -> Unit,
     modifier: Modifier = Modifier,
-    placeholder: String = "Rechercher une intervention...",
+    placeholder: String? = null,
     onClear: () -> Unit = {},
     testTag: String = "jobs_search_input"
 ) {
     val shape = RoundedCornerShape(12.dp)
     val searchLabel = stringResource(R.string.cd_search)
     val clearSearchLabel = stringResource(R.string.cd_clear_search)
+    val placeholderText = placeholder ?: stringResource(R.string.jobs_search_placeholder)
     Row(
         modifier = modifier
             .fillMaxWidth()
@@ -74,7 +75,7 @@ fun TervynSearchBar(
         ) {
             if (query.isEmpty()) {
                 Text(
-                    text = placeholder,
+                    text = placeholderText,
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
                 )
