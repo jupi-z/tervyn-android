@@ -36,11 +36,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import dev.amenokizele.tervyn.R
 import dev.amenokizele.tervyn.model.ThemeMode
 import dev.amenokizele.tervyn.ui.components.SectionHeader
 import dev.amenokizele.tervyn.ui.components.TervynSecondaryButton
@@ -60,7 +62,7 @@ fun SettingsScreen(
     Scaffold(
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
         topBar = {
-            TervynTopAppBar(title = "Paramètres")
+            TervynTopAppBar(title = stringResource(R.string.title_settings))
         },
         modifier = modifier
     ) { innerPadding ->
@@ -121,20 +123,20 @@ fun SettingsContent(
 
                 Column {
                     Text(
-                        text = "Amina Kizele",
+                        text = stringResource(R.string.settings_profile_name),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurface
                     )
                     Spacer(modifier = Modifier.height(2.dp))
                     Text(
-                        text = "amina@tervyn.demo",
+                        text = stringResource(R.string.settings_profile_email),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Spacer(modifier = Modifier.height(2.dp))
                     Text(
-                        text = "Technicienne terrain N2",
+                        text = stringResource(R.string.settings_profile_role),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.primary
                     )
@@ -143,7 +145,7 @@ fun SettingsContent(
 
             SectionDivider()
 
-            SectionHeader(title = "Apparence")
+            SectionHeader(title = stringResource(R.string.settings_section_appearance))
             Spacer(modifier = Modifier.height(Spacing.xs))
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -167,9 +169,9 @@ fun SettingsContent(
                     ) {
                         Text(
                             text = when (mode) {
-                                ThemeMode.SYSTEM -> "Système"
-                                ThemeMode.LIGHT -> "Clair"
-                                ThemeMode.DARK -> "Sombre"
+                                ThemeMode.SYSTEM -> stringResource(R.string.settings_theme_system)
+                                ThemeMode.LIGHT -> stringResource(R.string.settings_theme_light)
+                                ThemeMode.DARK -> stringResource(R.string.settings_theme_dark)
                             },
                             style = MaterialTheme.typography.labelMedium,
                             fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
@@ -181,26 +183,26 @@ fun SettingsContent(
 
             SectionDivider()
 
-            SectionHeader(title = "Synchronisation")
+            SectionHeader(title = stringResource(R.string.settings_section_sync))
             Spacer(modifier = Modifier.height(Spacing.xs))
             SettingsInfoRow(
                 icon = Icons.Default.Sync,
-                label = "Dernière synchronisation",
+                label = stringResource(R.string.settings_last_sync),
                 value = lastSyncTime
             )
 
             SectionDivider()
 
-            SectionHeader(title = "À propos")
+            SectionHeader(title = stringResource(R.string.settings_section_about))
             Spacer(modifier = Modifier.height(Spacing.xs))
-            SettingsInfoRow(label = "Application", value = "Tervyn")
-            SettingsInfoRow(label = "Version", value = "1.0")
-            SettingsInfoRow(label = "Licence", value = "MIT")
+            SettingsInfoRow(label = stringResource(R.string.settings_about_application), value = stringResource(R.string.app_name))
+            SettingsInfoRow(label = stringResource(R.string.settings_about_version), value = "1.0")
+            SettingsInfoRow(label = stringResource(R.string.settings_about_license), value = stringResource(R.string.settings_about_license_value))
 
             SectionDivider(extraTop = Spacing.xl)
 
             TervynSecondaryButton(
-                text = "Se déconnecter",
+                text = stringResource(R.string.action_logout),
                 onClick = onLogoutClick,
                 icon = Icons.AutoMirrored.Filled.ExitToApp,
                 testTag = "settings_logout_button"
