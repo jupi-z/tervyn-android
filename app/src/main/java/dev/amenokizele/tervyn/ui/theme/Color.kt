@@ -1,0 +1,30 @@
+package dev.amenokizele.tervyn.ui.theme
+
+import androidx.compose.ui.graphics.Color
+
+// Palette claire (Light Palette)
+val TervynPrimaryLight = Color(0xFF176B5B)
+val TervynPrimaryDarkLight = Color(0xFF0F5145)
+val TervynBackgroundLight = Color(0xFFF7F9F7)
+val TervynSurfaceLight = Color(0xFFFFFFFF)
+val TervynSurfaceSecondaryLight = Color(0xFFEEF2EF)
+val TervynTextPrimaryLight = Color(0xFF17201D)
+val TervynTextSecondaryLight = Color(0xFF5B6661)
+val TervynOutlineLight = Color(0xFFD4DDD8)
+val TervynErrorLight = Color(0xFFBA1A1A)
+val TervynWarningLight = Color(0xFF9A6700)
+val TervynSuccessLight = Color(0xFF176B5B)
+val TervynInfoLight = Color(0xFF315F8C)
+
+// Palette sombre (Dark Palette)
+val TervynPrimaryDark = Color(0xFF5FC6AA)
+val TervynBackgroundDark = Color(0xFF0E1210)
+val TervynSurfaceDark = Color(0xFF151A17)
+val TervynSurfaceSecondaryDark = Color(0xFF1D2420)
+val TervynTextPrimaryDark = Color(0xFFE8F0EC)
+val TervynTextSecondaryDark = Color(0xFFAAB7B0)
+val TervynOutlineDark = Color(0xFF39453F)
+val TervynErrorDark = Color(0xFFFFB4AB)
+val TervynWarningDark = Color(0xFFFFBA38)
+val TervynSuccessDark = Color(0xFF5FC6AA)
+val TervynInfoDark = Color(0xFF90CAF9)
