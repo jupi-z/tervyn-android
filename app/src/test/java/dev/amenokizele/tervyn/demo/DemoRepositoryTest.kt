@@ -2,6 +2,7 @@ package dev.amenokizele.tervyn.demo
 
 import dev.amenokizele.tervyn.model.DemoJob
 import dev.amenokizele.tervyn.model.JobStatus
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
@@ -57,6 +58,7 @@ class DemoRepositoryTest {
     }
 
     @Test
+    @OptIn(ExperimentalCoroutinesApi::class)
     fun observeJob_emitsRepositoryUpdates() = runTest {
         val observed = mutableListOf<DemoJob?>()
         val collectJob = backgroundScope.launch {

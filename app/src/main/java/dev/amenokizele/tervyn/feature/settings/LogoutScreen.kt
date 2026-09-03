@@ -12,7 +12,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ExitToApp
+import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
@@ -20,19 +20,16 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
+import dev.amenokizele.tervyn.R
 import dev.amenokizele.tervyn.model.ThemeMode
-import dev.amenokizele.tervyn.ui.components.InlineMessage
-import dev.amenokizele.tervyn.ui.components.InlineMessageType
 import dev.amenokizele.tervyn.ui.components.TervynSecondaryButton
 import dev.amenokizele.tervyn.ui.components.TervynTopAppBar
 import dev.amenokizele.tervyn.ui.theme.ButtonShape
@@ -43,15 +40,12 @@ import dev.amenokizele.tervyn.ui.theme.TervynTheme
 fun LogoutScreen(
     onBackClick: () -> Unit,
     onConfirmLogout: () -> Unit,
-    modifier: Modifier = Modifier,
-    viewModel: SettingsViewModel = viewModel()
+    modifier: Modifier = Modifier
 ) {
-    val pendingCount by viewModel.pendingCount.collectAsState()
-
     Scaffold(
         topBar = {
             TervynTopAppBar(
-                title = "Déconnexion",
+                title = stringResource(R.string.title_logout),
                 onBackClick = onBackClick
             )
         },
@@ -73,7 +67,7 @@ fun LogoutScreen(
                 verticalArrangement = Arrangement.Center
             ) {
                 Icon(
-                    imageVector = Icons.Default.ExitToApp,
+                    imageVector = Icons.AutoMirrored.Filled.ExitToApp,
                     contentDescription = null,
                     tint = MaterialTheme.colorScheme.error,
                     modifier = Modifier.size(64.dp)
@@ -82,7 +76,7 @@ fun LogoutScreen(
                 Spacer(modifier = Modifier.height(Spacing.lg))
 
                 Text(
-                    text = "Voulez-vous vous déconnecter ?",
+                    text = stringResource(R.string.logout_confirmation_title),
                     style = MaterialTheme.typography.headlineSmall,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface,
@@ -92,23 +86,13 @@ fun LogoutScreen(
                 Spacer(modifier = Modifier.height(Spacing.sm))
 
                 Text(
-                    text = "Vous devrez vous reconnecter pour accéder à vos interventions terrain et aux données locales.",
+                    text = stringResource(R.string.logout_confirmation_body),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     textAlign = TextAlign.Center
                 )
 
                 Spacer(modifier = Modifier.height(Spacing.lg))
-
-                if (pendingCount > 0) {
-                    InlineMessage(
-                        text = "Attention : $pendingCount modifications sont en attente de synchronisation sur cet appareil.",
-                        type = InlineMessageType.WARNING,
-                        modifier = Modifier.padding(bottom = Spacing.md)
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(Spacing.md))
 
                 Button(
                     onClick = onConfirmLogout,
@@ -123,7 +107,7 @@ fun LogoutScreen(
                         .testTag("confirm_logout_button")
                 ) {
                     Text(
-                        text = "Confirmer la déconnexion",
+                        text = stringResource(R.string.action_confirm_logout),
                         style = MaterialTheme.typography.labelLarge
                     )
                 }
@@ -131,7 +115,7 @@ fun LogoutScreen(
                 Spacer(modifier = Modifier.height(Spacing.md))
 
                 TervynSecondaryButton(
-                    text = "Annuler",
+                    text = stringResource(R.string.action_cancel),
                     onClick = onBackClick,
                     testTag = "cancel_logout_button"
                 )

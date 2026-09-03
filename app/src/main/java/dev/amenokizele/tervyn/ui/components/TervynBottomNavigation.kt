@@ -3,7 +3,7 @@ package dev.amenokizele.tervyn.ui.components
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Assignment
+import androidx.compose.material.icons.automirrored.filled.Assignment
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Sync
 import androidx.compose.material3.Badge
@@ -60,7 +60,7 @@ fun TervynBottomNavigation(
                     onClick = { onNavigate(BottomBarDestination.JOBS.route) },
                     icon = {
                         Icon(
-                            imageVector = Icons.Default.Assignment,
+                            imageVector = Icons.AutoMirrored.Filled.Assignment,
                             contentDescription = jobsLabel
                         )
                     },

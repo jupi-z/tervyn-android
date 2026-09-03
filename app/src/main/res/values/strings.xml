@@ -23,8 +23,12 @@
     <string name="title_complete_job">Clôture d\'intervention</string>
     <string name="title_settings">Paramètres</string>
     <string name="title_sync">Synchronisation</string>
+    <string name="title_logout">Déconnexion</string>
     <string name="title_photo_not_found">Photo introuvable</string>
     <string name="title_job_not_found">Intervention introuvable</string>
+    <string name="logout_confirmation_title">Voulez-vous vous déconnecter ?</string>
+    <string name="logout_confirmation_body">Vous devrez vous reconnecter pour accéder à vos interventions terrain et aux données de démonstration.</string>
+    <string name="action_confirm_logout">Confirmer la déconnexion</string>
     <string name="message_note_added">Note ajoutée</string>
     <string name="message_photo_added">Photo ajoutée</string>
     <string name="message_photo_deleted">Photo supprimée</string>
