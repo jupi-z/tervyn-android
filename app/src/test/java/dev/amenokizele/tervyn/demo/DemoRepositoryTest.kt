@@ -75,4 +75,33 @@ class DemoRepositoryTest {
         assertEquals(JobStatus.IN_PROGRESS, observed.last()?.status)
         collectJob.cancel()
     }
+
+    @Test
+    @OptIn(ExperimentalCoroutinesApi::class)
+    fun observeJob_emitsNotesPhotosDeletionAndCompletionUpdates() = runTest {
+        val observed = mutableListOf<DemoJob?>()
+        val collectJob = backgroundScope.launch {
+            DemoRepository.observeJob("job-003").collect { observed.add(it) }
+        }
+        runCurrent()
+
+        assertNotNull(DemoRepository.addNote("job-003", "Note observable"))
+        runCurrent()
+        assertTrue(observed.last()?.notes?.any { it.content == "Note observable" } == true)
+
+        val addedPhoto = checkNotNull(DemoRepository.addPhoto("job-003", "Photo observable"))
+        runCurrent()
+        assertTrue(observed.last()?.photos?.any { it.id == addedPhoto.id } == true)
+
+        assertTrue(DemoRepository.deletePhoto("job-003", addedPhoto.id))
+        runCurrent()
+        assertFalse(observed.last()?.photos?.any { it.id == addedPhoto.id } == true)
+
+        assertTrue(DemoRepository.toggleChecklistItem("job-003", "c3-3"))
+        assertTrue(DemoRepository.completeJob("job-003"))
+        runCurrent()
+        assertEquals(JobStatus.COMPLETED, observed.last()?.status)
+
+        collectJob.cancel()
+    }
 }
