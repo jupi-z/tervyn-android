@@ -3,23 +3,29 @@ package dev.amenokizele.tervyn
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.viewModels
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.navigation.compose.rememberNavController
-import dev.amenokizele.tervyn.demo.DemoRepository
-import dev.amenokizele.tervyn.navigation.TervynNavGraph
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import dagger.hilt.android.AndroidEntryPoint
+import dev.amenokizele.tervyn.app.TervynApp
+import dev.amenokizele.tervyn.app.TervynAppViewModel
 import dev.amenokizele.tervyn.ui.theme.TervynTheme
 
+@AndroidEntryPoint
 class MainActivity : ComponentActivity() {
+    private val appViewModel: TervynAppViewModel by viewModels()
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            val themeMode by DemoRepository.themeMode.collectAsState()
-            TervynTheme(themeMode = themeMode) {
-                val navController = rememberNavController()
-                TervynNavGraph(navController = navController)
+            val appState by appViewModel.state.collectAsStateWithLifecycle()
+            TervynTheme(themeMode = appState.themeMode) {
+                TervynApp(
+                    state = appState,
+                    onLogoutConfirmed = appViewModel::logout
+                )
             }
         }
     }

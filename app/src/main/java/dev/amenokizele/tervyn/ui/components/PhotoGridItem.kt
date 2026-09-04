@@ -20,6 +20,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -27,17 +28,21 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import dev.amenokizele.tervyn.model.DemoPhoto
-import dev.amenokizele.tervyn.model.SyncState
+import dev.amenokizele.tervyn.core.time.TervynDateTimeFormatter
+import dev.amenokizele.tervyn.domain.model.Attachment
+import dev.amenokizele.tervyn.domain.model.SyncState
 import dev.amenokizele.tervyn.ui.theme.Spacing
 import dev.amenokizele.tervyn.ui.theme.TileShape
 
 @Composable
 fun PhotoGridItem(
-    photo: DemoPhoto,
+    photo: Attachment,
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val dateTimeFormatter = remember { TervynDateTimeFormatter() }
+    val title = photo.fileName ?: "Photo terrain"
+    val tag = photo.localUri?.substringAfterLast('/') ?: "PHOTO"
     Column(
         modifier = modifier
             .fillMaxWidth()
@@ -60,13 +65,13 @@ fun PhotoGridItem(
             ) {
                 Icon(
                     imageVector = Icons.Default.Image,
-                    contentDescription = photo.title,
+                    contentDescription = title,
                     tint = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.size(Spacing.xl)
                 )
                 Spacer(modifier = Modifier.height(Spacing.xs))
                 Text(
-                    text = photo.placeholderTag,
+                    text = tag,
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -86,7 +91,7 @@ fun PhotoGridItem(
         Spacer(modifier = Modifier.height(Spacing.xxs))
 
         Text(
-            text = photo.title,
+            text = title,
             style = MaterialTheme.typography.bodySmall,
             fontWeight = FontWeight.Medium,
             color = MaterialTheme.colorScheme.onSurface,
@@ -94,7 +99,7 @@ fun PhotoGridItem(
             overflow = TextOverflow.Ellipsis
         )
         Text(
-            text = photo.createdAt,
+            text = dateTimeFormatter.formatTime(photo.createdAt),
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )

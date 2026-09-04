@@ -1,4 +1,4 @@
-package dev.amenokizele.tervyn.model
+package dev.amenokizele.tervyn.domain.model
 
 enum class SyncState {
     SYNCED,
