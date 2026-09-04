@@ -18,7 +18,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import dev.amenokizele.tervyn.R
-import dev.amenokizele.tervyn.model.SyncState
+import dev.amenokizele.tervyn.domain.model.SyncState
 import dev.amenokizele.tervyn.ui.theme.Spacing
 
 @Composable

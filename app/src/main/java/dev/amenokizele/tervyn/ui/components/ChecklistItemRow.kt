@@ -26,13 +26,13 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import dev.amenokizele.tervyn.R
-import dev.amenokizele.tervyn.model.DemoChecklistItem
+import dev.amenokizele.tervyn.domain.model.ChecklistItem
 import dev.amenokizele.tervyn.ui.theme.BadgeShape
 import dev.amenokizele.tervyn.ui.theme.Spacing
 
 @Composable
 fun ChecklistItemRow(
-    item: DemoChecklistItem,
+    item: ChecklistItem,
     onToggle: () -> Unit,
     modifier: Modifier = Modifier,
     enabled: Boolean = true

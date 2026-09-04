@@ -29,7 +29,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -41,9 +40,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import dev.amenokizele.tervyn.BuildConfig
 import dev.amenokizele.tervyn.R
-import dev.amenokizele.tervyn.model.ThemeMode
+import dev.amenokizele.tervyn.domain.model.ThemeMode
 import dev.amenokizele.tervyn.ui.components.SectionHeader
 import dev.amenokizele.tervyn.ui.components.TervynSecondaryButton
 import dev.amenokizele.tervyn.ui.components.TervynTopAppBar
@@ -54,10 +55,10 @@ import dev.amenokizele.tervyn.ui.theme.TervynTheme
 fun SettingsScreen(
     onNavigateToLogout: () -> Unit,
     modifier: Modifier = Modifier,
-    viewModel: SettingsViewModel = viewModel()
+    viewModel: SettingsViewModel = hiltViewModel()
 ) {
-    val currentTheme by viewModel.currentTheme.collectAsState()
-    val lastSyncTime by viewModel.lastSyncTime.collectAsState()
+    val currentTheme by viewModel.currentTheme.collectAsStateWithLifecycle()
+    val lastSyncTime by viewModel.lastSyncTime.collectAsStateWithLifecycle()
 
     Scaffold(
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
@@ -69,6 +70,7 @@ fun SettingsScreen(
         SettingsContent(
             currentTheme = currentTheme,
             lastSyncTime = lastSyncTime,
+            versionName = BuildConfig.VERSION_NAME,
             onThemeSelected = viewModel::setTheme,
             onLogoutClick = onNavigateToLogout,
             modifier = Modifier.padding(innerPadding)
@@ -80,6 +82,7 @@ fun SettingsScreen(
 fun SettingsContent(
     currentTheme: ThemeMode,
     lastSyncTime: String,
+    versionName: String,
     onThemeSelected: (ThemeMode) -> Unit,
     onLogoutClick: () -> Unit,
     modifier: Modifier = Modifier
@@ -196,7 +199,7 @@ fun SettingsContent(
             SectionHeader(title = stringResource(R.string.settings_section_about))
             Spacer(modifier = Modifier.height(Spacing.xs))
             SettingsInfoRow(label = stringResource(R.string.settings_about_application), value = stringResource(R.string.app_name))
-            SettingsInfoRow(label = stringResource(R.string.settings_about_version), value = "1.0")
+            SettingsInfoRow(label = stringResource(R.string.settings_about_version), value = versionName)
             SettingsInfoRow(label = stringResource(R.string.settings_about_license), value = stringResource(R.string.settings_about_license_value))
 
             SectionDivider(extraTop = Spacing.xl)
@@ -272,6 +275,7 @@ private fun SettingsScreenPreviewLight() {
         SettingsContent(
             currentTheme = ThemeMode.LIGHT,
             lastSyncTime = "Aujourd'hui · 14:32",
+            versionName = "1.0",
             onThemeSelected = {},
             onLogoutClick = {}
         )
@@ -285,6 +289,7 @@ private fun SettingsScreenPreviewDark() {
         SettingsContent(
             currentTheme = ThemeMode.DARK,
             lastSyncTime = "Aujourd'hui · 08:00",
+            versionName = "1.0",
             onThemeSelected = {},
             onLogoutClick = {}
         )

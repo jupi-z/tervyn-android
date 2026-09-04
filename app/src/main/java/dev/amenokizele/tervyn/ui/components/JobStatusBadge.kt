@@ -14,7 +14,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import dev.amenokizele.tervyn.R
-import dev.amenokizele.tervyn.model.JobStatus
+import dev.amenokizele.tervyn.domain.model.JobStatus
 import dev.amenokizele.tervyn.ui.theme.BadgeShape
 import dev.amenokizele.tervyn.ui.theme.Spacing
 

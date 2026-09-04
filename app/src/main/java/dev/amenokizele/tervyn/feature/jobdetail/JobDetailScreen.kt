@@ -23,7 +23,6 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -34,12 +33,14 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.amenokizele.tervyn.R
-import dev.amenokizele.tervyn.demo.DemoData
-import dev.amenokizele.tervyn.model.DemoJob
-import dev.amenokizele.tervyn.model.JobStatus
-import dev.amenokizele.tervyn.model.ThemeMode
+import dev.amenokizele.tervyn.core.time.TervynDateTimeFormatter
+import dev.amenokizele.tervyn.domain.model.Job
+import dev.amenokizele.tervyn.domain.model.JobStatus
+import dev.amenokizele.tervyn.domain.model.SyncState
+import dev.amenokizele.tervyn.domain.model.ThemeMode
 import dev.amenokizele.tervyn.ui.components.EmptyState
 import dev.amenokizele.tervyn.ui.components.JobStatusBadge
 import dev.amenokizele.tervyn.ui.components.PriorityBadge
@@ -48,6 +49,7 @@ import dev.amenokizele.tervyn.ui.components.SyncStateIndicator
 import dev.amenokizele.tervyn.ui.components.TervynPrimaryButton
 import dev.amenokizele.tervyn.ui.components.TervynSecondaryButton
 import dev.amenokizele.tervyn.ui.components.TervynTopAppBar
+import dev.amenokizele.tervyn.ui.preview.TervynPreviewData
 import dev.amenokizele.tervyn.ui.theme.Spacing
 import dev.amenokizele.tervyn.ui.theme.TervynTheme
 import kotlinx.coroutines.launch
@@ -58,9 +60,9 @@ fun JobDetailScreen(
     onBackClick: () -> Unit,
     onNavigateToExecution: (String) -> Unit,
     modifier: Modifier = Modifier,
-    viewModel: JobDetailViewModel = viewModel()
+    viewModel: JobDetailViewModel = hiltViewModel()
 ) {
-    val job by viewModel.job.collectAsState()
+    val job by viewModel.job.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
     val jobStartedMessage = stringResource(R.string.message_job_started)
@@ -108,16 +110,17 @@ fun JobDetailScreen(
 
 @Composable
 fun JobDetailContent(
-    job: DemoJob,
+    job: Job,
     onStartJob: () -> Unit,
     onContinueJob: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val dateTimeFormatter = remember { TervynDateTimeFormatter() }
     val syncDescription = when (job.syncState) {
-        dev.amenokizele.tervyn.model.SyncState.SYNCED -> stringResource(R.string.sync_state_synced_detail)
-        dev.amenokizele.tervyn.model.SyncState.PENDING -> stringResource(R.string.sync_state_pending_detail)
-        dev.amenokizele.tervyn.model.SyncState.SYNCING -> stringResource(R.string.sync_state_syncing_detail)
-        dev.amenokizele.tervyn.model.SyncState.FAILED -> stringResource(R.string.sync_state_failed_detail)
+        SyncState.SYNCED -> stringResource(R.string.sync_state_synced_detail)
+        SyncState.PENDING -> stringResource(R.string.sync_state_pending_detail)
+        SyncState.SYNCING -> stringResource(R.string.sync_state_syncing_detail)
+        SyncState.FAILED -> stringResource(R.string.sync_state_failed_detail)
     }
     Box(
         modifier = modifier
@@ -169,17 +172,17 @@ fun JobDetailContent(
             // Information fields
             DetailSection(label = stringResource(R.string.label_client), value = job.clientName)
             DetailSection(label = stringResource(R.string.label_site), value = job.siteName)
-            DetailSection(label = stringResource(R.string.label_address), value = job.siteAddress)
-            DetailSection(label = stringResource(R.string.label_scheduled), value = stringResource(R.string.date_demo_september_02, job.scheduledAt))
+            DetailSection(label = stringResource(R.string.label_address), value = job.siteAddress.orEmpty())
+            DetailSection(label = stringResource(R.string.label_scheduled), value = dateTimeFormatter.formatDayTime(job.scheduledAt))
 
             if (job.startedAt != null) {
-                DetailSection(label = stringResource(R.string.label_started), value = stringResource(R.string.date_demo_september_02, job.startedAt))
+                DetailSection(label = stringResource(R.string.label_started), value = dateTimeFormatter.formatDayTime(job.startedAt))
             }
             if (job.completedAt != null) {
-                DetailSection(label = stringResource(R.string.label_completed), value = stringResource(R.string.date_demo_september_02, job.completedAt))
+                DetailSection(label = stringResource(R.string.label_completed), value = dateTimeFormatter.formatDayTime(job.completedAt))
             }
 
-            DetailSection(label = stringResource(R.string.label_description), value = job.description)
+            DetailSection(label = stringResource(R.string.label_description), value = job.description.orEmpty())
 
             // Checklist summary
             SectionHeader(
@@ -252,7 +255,7 @@ private fun DetailSection(label: String, value: String) {
 private fun JobDetailScreenPreviewLight() {
     TervynTheme(themeMode = ThemeMode.LIGHT) {
         JobDetailContent(
-            job = DemoData.initialJobs.first(),
+            job = TervynPreviewData.jobs.first(),
             onStartJob = {},
             onContinueJob = {}
         )
@@ -264,7 +267,7 @@ private fun JobDetailScreenPreviewLight() {
 private fun JobDetailScreenPreviewDark() {
     TervynTheme(themeMode = ThemeMode.DARK) {
         JobDetailContent(
-            job = DemoData.initialJobs[2],
+            job = TervynPreviewData.inProgressJob,
             onStartJob = {},
             onContinueJob = {}
         )

@@ -17,10 +17,10 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -28,10 +28,11 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.amenokizele.tervyn.R
-import dev.amenokizele.tervyn.model.JobStatus
-import dev.amenokizele.tervyn.model.ThemeMode
+import dev.amenokizele.tervyn.domain.model.JobStatus
+import dev.amenokizele.tervyn.domain.model.ThemeMode
 import dev.amenokizele.tervyn.ui.components.InlineMessage
 import dev.amenokizele.tervyn.ui.components.InlineMessageType
 import dev.amenokizele.tervyn.ui.components.TervynOutlinedTextField
@@ -40,6 +41,7 @@ import dev.amenokizele.tervyn.ui.components.TervynSecondaryButton
 import dev.amenokizele.tervyn.ui.components.TervynTopAppBar
 import dev.amenokizele.tervyn.ui.theme.Spacing
 import dev.amenokizele.tervyn.ui.theme.TervynTheme
+import kotlinx.coroutines.launch
 
 @Composable
 fun AddNoteScreen(
@@ -47,9 +49,10 @@ fun AddNoteScreen(
     onBackClick: () -> Unit,
     onNoteAdded: () -> Unit,
     modifier: Modifier = Modifier,
-    viewModel: ExecutionViewModel = viewModel()
+    viewModel: ExecutionViewModel = hiltViewModel()
 ) {
-    val job by viewModel.job.collectAsState()
+    val job by viewModel.job.collectAsStateWithLifecycle()
+    val scope = rememberCoroutineScope()
     var noteContent by remember { mutableStateOf("") }
     var isError by remember { mutableStateOf(false) }
     val canEdit = job?.status == JobStatus.IN_PROGRESS
@@ -130,8 +133,12 @@ fun AddNoteScreen(
                     onClick = {
                         if (noteContent.isBlank()) {
                             isError = true
-                        } else if (viewModel.addNote(jobId, noteContent)) {
-                            onNoteAdded()
+                        } else {
+                            scope.launch {
+                                if (viewModel.addNote(jobId, noteContent)) {
+                                    onNoteAdded()
+                                }
+                            }
                         }
                     },
                     enabled = canEdit,

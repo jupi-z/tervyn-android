@@ -27,10 +27,10 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -41,10 +41,11 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.amenokizele.tervyn.R
-import dev.amenokizele.tervyn.model.JobStatus
-import dev.amenokizele.tervyn.model.ThemeMode
+import dev.amenokizele.tervyn.domain.model.JobStatus
+import dev.amenokizele.tervyn.domain.model.ThemeMode
 import dev.amenokizele.tervyn.ui.components.InlineMessage
 import dev.amenokizele.tervyn.ui.components.InlineMessageType
 import dev.amenokizele.tervyn.ui.components.TervynOutlinedTextField
@@ -53,6 +54,7 @@ import dev.amenokizele.tervyn.ui.components.TervynSecondaryButton
 import dev.amenokizele.tervyn.ui.components.TervynTopAppBar
 import dev.amenokizele.tervyn.ui.theme.Spacing
 import dev.amenokizele.tervyn.ui.theme.TervynTheme
+import kotlinx.coroutines.launch
 
 @Composable
 fun AddPhotoScreen(
@@ -60,9 +62,10 @@ fun AddPhotoScreen(
     onBackClick: () -> Unit,
     onPhotoAdded: () -> Unit,
     modifier: Modifier = Modifier,
-    viewModel: ExecutionViewModel = viewModel()
+    viewModel: ExecutionViewModel = hiltViewModel()
 ) {
-    val job by viewModel.job.collectAsState()
+    val job by viewModel.job.collectAsStateWithLifecycle()
+    val scope = rememberCoroutineScope()
     val initialPhotoTitle = stringResource(R.string.add_photo_default_title)
     var photoTitle by remember { mutableStateOf(initialPhotoTitle) }
     var selectedTag by remember { mutableStateOf("CABLING") }
@@ -209,8 +212,10 @@ fun AddPhotoScreen(
                 TervynPrimaryButton(
                     text = stringResource(R.string.action_add_photo),
                     onClick = {
-                        if (viewModel.addPhoto(jobId, photoTitle.ifBlank { defaultPhotoTitle }, selectedTag)) {
-                            onPhotoAdded()
+                        scope.launch {
+                            if (viewModel.addPhoto(jobId, photoTitle.ifBlank { defaultPhotoTitle }, selectedTag)) {
+                                onPhotoAdded()
+                            }
                         }
                     },
                     enabled = canEdit,

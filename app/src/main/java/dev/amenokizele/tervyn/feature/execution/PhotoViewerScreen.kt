@@ -28,10 +28,10 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -42,18 +42,19 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.amenokizele.tervyn.R
-import dev.amenokizele.tervyn.model.DemoPhoto
-import dev.amenokizele.tervyn.model.JobStatus
-import dev.amenokizele.tervyn.model.SyncState
-import dev.amenokizele.tervyn.model.ThemeMode
+import dev.amenokizele.tervyn.core.time.TervynDateTimeFormatter
+import dev.amenokizele.tervyn.domain.model.JobStatus
+import dev.amenokizele.tervyn.domain.model.ThemeMode
 import dev.amenokizele.tervyn.ui.components.EmptyState
 import dev.amenokizele.tervyn.ui.components.SyncStateIndicator
 import dev.amenokizele.tervyn.ui.components.TervynPrimaryButton
 import dev.amenokizele.tervyn.ui.theme.ButtonShape
 import dev.amenokizele.tervyn.ui.theme.Spacing
 import dev.amenokizele.tervyn.ui.theme.TervynTheme
+import kotlinx.coroutines.launch
 
 @Composable
 fun PhotoViewerScreen(
@@ -62,16 +63,18 @@ fun PhotoViewerScreen(
     onBackClick: () -> Unit,
     onPhotoDeleted: () -> Unit,
     modifier: Modifier = Modifier,
-    viewModel: ExecutionViewModel = viewModel()
+    viewModel: ExecutionViewModel = hiltViewModel()
 ) {
-    val job by viewModel.job.collectAsState()
+    val job by viewModel.job.collectAsStateWithLifecycle()
+    val scope = rememberCoroutineScope()
+    val dateTimeFormatter = remember { TervynDateTimeFormatter() }
     var isConfirmingDelete by remember { mutableStateOf(false) }
 
     LaunchedEffect(jobId) {
         viewModel.loadJob(jobId)
     }
 
-    val photo = job?.photos?.find { it.id == photoId }
+    val photo = job?.attachments?.find { it.id == photoId }
     val canDelete = job?.status == JobStatus.IN_PROGRESS
     val backLabel = stringResource(R.string.action_back)
     val deletePhotoLabel = stringResource(R.string.action_delete_photo)
@@ -118,7 +121,7 @@ fun PhotoViewerScreen(
                     }
 
                     Text(
-                        text = photo.title,
+                        text = photo.fileName ?: stringResource(R.string.add_photo_default_title),
                         style = MaterialTheme.typography.titleMedium,
                         color = Color.White,
                         fontWeight = FontWeight.SemiBold
@@ -166,14 +169,17 @@ fun PhotoViewerScreen(
                             )
                             Spacer(modifier = Modifier.height(Spacing.md))
                             Text(
-                                text = stringResource(R.string.photo_placeholder, photo.placeholderTag),
+                                text = stringResource(
+                                    R.string.photo_placeholder,
+                                    photo.localUri?.substringAfterLast('/') ?: "PHOTO"
+                                ),
                                 style = MaterialTheme.typography.titleMedium,
                                 color = Color(0xFFE8F0EC),
                                 fontWeight = FontWeight.Bold
                             )
                             Spacer(modifier = Modifier.height(Spacing.xxs))
                             Text(
-                                text = photo.title,
+                                text = photo.fileName ?: stringResource(R.string.add_photo_default_title),
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = Color(0xFFAAB7B0)
                             )
@@ -215,10 +221,12 @@ fun PhotoViewerScreen(
                             }
                             OutlinedButton(
                                 onClick = {
-                                    if (viewModel.deletePhoto(jobId, photoId)) {
-                                        onPhotoDeleted()
-                                    } else {
-                                        isConfirmingDelete = false
+                                    scope.launch {
+                                        if (viewModel.deletePhoto(jobId, photoId)) {
+                                            onPhotoDeleted()
+                                        } else {
+                                            isConfirmingDelete = false
+                                        }
                                     }
                                 },
                                 shape = ButtonShape,
@@ -243,7 +251,7 @@ fun PhotoViewerScreen(
                                     color = Color(0xFFAAB7B0)
                                 )
                                 Text(
-                                    text = stringResource(R.string.date_demo_september_02, photo.createdAt),
+                                    text = dateTimeFormatter.formatDayTime(photo.createdAt),
                                     style = MaterialTheme.typography.bodyMedium,
                                     color = Color.White,
                                     fontWeight = FontWeight.Medium

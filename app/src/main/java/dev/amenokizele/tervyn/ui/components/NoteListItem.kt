@@ -11,19 +11,27 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
-import dev.amenokizele.tervyn.model.DemoNote
-import dev.amenokizele.tervyn.model.SyncState
+import dev.amenokizele.tervyn.core.time.TervynDateTimeFormatter
+import dev.amenokizele.tervyn.domain.model.Note
+import dev.amenokizele.tervyn.domain.model.SyncState
 import dev.amenokizele.tervyn.ui.theme.Spacing
 
 @Composable
 fun NoteListItem(
-    note: DemoNote,
+    note: Note,
     modifier: Modifier = Modifier
 ) {
+    val dateTimeFormatter = remember { TervynDateTimeFormatter() }
+    val authorLabel = when (note.authorUserId) {
+        "user-amina" -> "Vous"
+        "support-n1" -> "Support N1"
+        else -> note.authorUserId
+    }
     Column(
         modifier = modifier
             .fillMaxWidth()
@@ -44,7 +52,7 @@ fun NoteListItem(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                text = "${note.author} · ${note.createdAt}",
+                text = "$authorLabel · ${dateTimeFormatter.formatTime(note.createdAt)}",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )

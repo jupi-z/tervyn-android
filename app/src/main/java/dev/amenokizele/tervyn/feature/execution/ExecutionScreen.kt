@@ -24,8 +24,9 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
@@ -33,12 +34,13 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.amenokizele.tervyn.R
-import dev.amenokizele.tervyn.demo.DemoData
-import dev.amenokizele.tervyn.model.DemoJob
-import dev.amenokizele.tervyn.model.JobStatus
-import dev.amenokizele.tervyn.model.ThemeMode
+import dev.amenokizele.tervyn.core.time.TervynDateTimeFormatter
+import dev.amenokizele.tervyn.domain.model.Job
+import dev.amenokizele.tervyn.domain.model.JobStatus
+import dev.amenokizele.tervyn.domain.model.ThemeMode
 import dev.amenokizele.tervyn.ui.components.ChecklistItemRow
 import dev.amenokizele.tervyn.ui.components.EmptyState
 import dev.amenokizele.tervyn.ui.components.InlineMessage
@@ -48,8 +50,10 @@ import dev.amenokizele.tervyn.ui.components.PhotoGridItem
 import dev.amenokizele.tervyn.ui.components.SectionHeader
 import dev.amenokizele.tervyn.ui.components.TervynPrimaryButton
 import dev.amenokizele.tervyn.ui.components.TervynTopAppBar
+import dev.amenokizele.tervyn.ui.preview.TervynPreviewData
 import dev.amenokizele.tervyn.ui.theme.Spacing
 import dev.amenokizele.tervyn.ui.theme.TervynTheme
+import kotlinx.coroutines.launch
 
 @Composable
 fun ExecutionScreen(
@@ -60,9 +64,10 @@ fun ExecutionScreen(
     onNavigateToPhotoViewer: (String, String) -> Unit,
     onNavigateToCompleteJob: (String) -> Unit,
     modifier: Modifier = Modifier,
-    viewModel: ExecutionViewModel = viewModel()
+    viewModel: ExecutionViewModel = hiltViewModel()
 ) {
-    val job by viewModel.job.collectAsState()
+    val job by viewModel.job.collectAsStateWithLifecycle()
+    val scope = rememberCoroutineScope()
 
     LaunchedEffect(jobId) {
         viewModel.loadJob(jobId)
@@ -89,7 +94,11 @@ fun ExecutionScreen(
         } else {
             ExecutionContent(
                 job = job!!,
-                onToggleChecklist = { itemId -> viewModel.toggleChecklistItem(jobId, itemId) },
+                onToggleChecklist = { itemId ->
+                    scope.launch {
+                        viewModel.toggleChecklistItem(jobId, itemId)
+                    }
+                },
                 onAddNoteClick = { onNavigateToAddNote(jobId) },
                 onAddPhotoClick = { onNavigateToAddPhoto(jobId) },
                 onPhotoClick = { photoId -> onNavigateToPhotoViewer(jobId, photoId) },
@@ -102,7 +111,7 @@ fun ExecutionScreen(
 
 @Composable
 fun ExecutionContent(
-    job: DemoJob,
+    job: Job,
     onToggleChecklist: (String) -> Unit,
     onAddNoteClick: () -> Unit,
     onAddPhotoClick: () -> Unit,
@@ -110,6 +119,7 @@ fun ExecutionContent(
     onCompleteClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val dateTimeFormatter = remember { TervynDateTimeFormatter() }
     val isEditable = job.status == JobStatus.IN_PROGRESS
     val canComplete = isEditable && job.allRequiredCompleted
 
@@ -210,7 +220,7 @@ fun ExecutionContent(
             ) {
                 SectionHeader(
                     title = stringResource(R.string.label_photos),
-                    trailingText = "${job.photos.size}",
+                    trailingText = "${job.attachments.size}",
                     modifier = Modifier.weight(1f)
                 )
 
@@ -226,7 +236,7 @@ fun ExecutionContent(
                 }
             }
 
-            if (job.photos.isEmpty()) {
+            if (job.attachments.isEmpty()) {
                 Text(
                     text = stringResource(R.string.photos_empty),
                     style = MaterialTheme.typography.bodyMedium,
@@ -235,7 +245,7 @@ fun ExecutionContent(
                 )
             } else {
                 // 2 columns photo grid
-                val chunkedPhotos = job.photos.chunked(2)
+                val chunkedPhotos = job.attachments.chunked(2)
                 chunkedPhotos.forEach { rowPhotos ->
                     Row(
                         modifier = Modifier
@@ -281,7 +291,9 @@ fun ExecutionContent(
                 InlineMessage(
                     text = stringResource(
                         R.string.execution_completed_readonly,
-                        job.completedAt ?: stringResource(R.string.execution_completed_fallback_time)
+                        dateTimeFormatter.formatDayTime(job.completedAt).ifBlank {
+                            stringResource(R.string.execution_completed_fallback_time)
+                        }
                     ),
                     type = InlineMessageType.SUCCESS
                 )
@@ -297,7 +309,7 @@ fun ExecutionContent(
 private fun ExecutionScreenPreviewLight() {
     TervynTheme(themeMode = ThemeMode.LIGHT) {
         ExecutionContent(
-            job = DemoData.initialJobs[2],
+            job = TervynPreviewData.inProgressJob,
             onToggleChecklist = {},
             onAddNoteClick = {},
             onAddPhotoClick = {},
@@ -312,7 +324,7 @@ private fun ExecutionScreenPreviewLight() {
 private fun ExecutionScreenPreviewDark() {
     TervynTheme(themeMode = ThemeMode.DARK) {
         ExecutionContent(
-            job = DemoData.initialJobs[2],
+            job = TervynPreviewData.inProgressJob,
             onToggleChecklist = {},
             onAddNoteClick = {},
             onAddPhotoClick = {},

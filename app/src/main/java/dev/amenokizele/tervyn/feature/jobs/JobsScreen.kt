@@ -20,7 +20,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -29,17 +28,18 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.amenokizele.tervyn.R
-import dev.amenokizele.tervyn.demo.DemoData
-import dev.amenokizele.tervyn.model.DemoJob
+import dev.amenokizele.tervyn.domain.model.Job
+import dev.amenokizele.tervyn.domain.model.ThemeMode
 import dev.amenokizele.tervyn.model.JobFilter
-import dev.amenokizele.tervyn.model.ThemeMode
 import dev.amenokizele.tervyn.ui.components.EmptyState
 import dev.amenokizele.tervyn.ui.components.JobListItem
 import dev.amenokizele.tervyn.ui.components.OfflineBanner
 import dev.amenokizele.tervyn.ui.components.TervynFilterTabs
 import dev.amenokizele.tervyn.ui.components.TervynSearchBar
+import dev.amenokizele.tervyn.ui.preview.TervynPreviewData
 import dev.amenokizele.tervyn.ui.theme.Spacing
 import dev.amenokizele.tervyn.ui.theme.TervynTheme
 
@@ -47,13 +47,13 @@ import dev.amenokizele.tervyn.ui.theme.TervynTheme
 fun JobsScreen(
     onJobClick: (String) -> Unit,
     modifier: Modifier = Modifier,
-    viewModel: JobsViewModel = viewModel()
+    viewModel: JobsViewModel = hiltViewModel()
 ) {
-    val jobs by viewModel.jobs.collectAsState()
-    val selectedFilter by viewModel.selectedFilter.collectAsState()
-    val searchQuery by viewModel.searchQuery.collectAsState()
-    val isOffline by viewModel.isOffline.collectAsState()
-    val filterCounts by viewModel.filterCounts.collectAsState()
+    val jobs by viewModel.jobs.collectAsStateWithLifecycle()
+    val selectedFilter by viewModel.selectedFilter.collectAsStateWithLifecycle()
+    val searchQuery by viewModel.searchQuery.collectAsStateWithLifecycle()
+    val isOffline by viewModel.isOffline.collectAsStateWithLifecycle()
+    val filterCounts by viewModel.filterCounts.collectAsStateWithLifecycle()
 
     JobsContent(
         jobs = jobs,
@@ -71,7 +71,7 @@ fun JobsScreen(
 
 @Composable
 fun JobsContent(
-    jobs: List<DemoJob>,
+    jobs: List<Job>,
     selectedFilter: JobFilter,
     searchQuery: String,
     isOffline: Boolean,
@@ -223,7 +223,7 @@ fun JobsContent(
 private fun JobsScreenPreviewLight() {
     TervynTheme(themeMode = ThemeMode.LIGHT) {
         JobsContent(
-            jobs = DemoData.initialJobs.take(4),
+            jobs = TervynPreviewData.jobs,
             selectedFilter = JobFilter.ALL,
             searchQuery = "",
             isOffline = true,
@@ -241,7 +241,7 @@ private fun JobsScreenPreviewLight() {
 private fun JobsScreenPreviewDark() {
     TervynTheme(themeMode = ThemeMode.DARK) {
         JobsContent(
-            jobs = DemoData.initialJobs.take(4),
+            jobs = TervynPreviewData.jobs,
             selectedFilter = JobFilter.ASSIGNED,
             searchQuery = "",
             isOffline = false,

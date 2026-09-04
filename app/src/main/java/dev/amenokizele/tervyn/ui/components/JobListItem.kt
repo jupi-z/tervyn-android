@@ -13,22 +13,25 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import dev.amenokizele.tervyn.model.DemoJob
-import dev.amenokizele.tervyn.model.SyncState
+import dev.amenokizele.tervyn.core.time.TervynDateTimeFormatter
+import dev.amenokizele.tervyn.domain.model.Job
+import dev.amenokizele.tervyn.domain.model.SyncState
 import dev.amenokizele.tervyn.ui.theme.Spacing
 
 @Composable
 fun JobListItem(
-    job: DemoJob,
+    job: Job,
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val dateTimeFormatter = remember { TervynDateTimeFormatter() }
     Column(
         modifier = modifier
             .fillMaxWidth()
@@ -45,7 +48,7 @@ fun JobListItem(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                text = job.scheduledAt,
+                text = dateTimeFormatter.formatTime(job.scheduledAt),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.primary

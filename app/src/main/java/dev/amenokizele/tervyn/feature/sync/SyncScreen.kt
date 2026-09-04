@@ -34,7 +34,6 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -45,9 +44,10 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.amenokizele.tervyn.R
-import dev.amenokizele.tervyn.model.ThemeMode
+import dev.amenokizele.tervyn.domain.model.ThemeMode
 import dev.amenokizele.tervyn.ui.components.InlineMessage
 import dev.amenokizele.tervyn.ui.components.InlineMessageType
 import dev.amenokizele.tervyn.ui.components.SectionHeader
@@ -60,13 +60,13 @@ import kotlinx.coroutines.launch
 @Composable
 fun SyncScreen(
     modifier: Modifier = Modifier,
-    viewModel: SyncViewModel = viewModel()
+    viewModel: SyncViewModel = hiltViewModel()
 ) {
-    val isSyncing by viewModel.isSyncing.collectAsState()
-    val isOffline by viewModel.isOffline.collectAsState()
-    val syncError by viewModel.syncError.collectAsState()
-    val lastSyncTime by viewModel.lastSyncTime.collectAsState()
-    val pendingCount by viewModel.pendingCount.collectAsState()
+    val isSyncing by viewModel.isSyncing.collectAsStateWithLifecycle()
+    val isOffline by viewModel.isOffline.collectAsStateWithLifecycle()
+    val syncError by viewModel.syncError.collectAsStateWithLifecycle()
+    val lastSyncTime by viewModel.lastSyncTime.collectAsStateWithLifecycle()
+    val pendingCount by viewModel.pendingCount.collectAsStateWithLifecycle()
 
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
