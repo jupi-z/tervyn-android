@@ -42,6 +42,11 @@ android {
   }
 }
 
+ksp {
+  arg("room.schemaLocation", "$projectDir/schemas")
+  arg("room.incremental", "true")
+}
+
 dependencies {
   implementation(platform(libs.androidx.compose.bom))
   implementation(libs.androidx.activity.compose)
@@ -60,13 +65,23 @@ dependencies {
   implementation(libs.kotlinx.coroutines.android)
   implementation(libs.kotlinx.coroutines.core)
   implementation(libs.hilt.android)
+  implementation(libs.androidx.room.runtime)
+  implementation(libs.androidx.room.ktx)
 
   debugImplementation(libs.androidx.compose.ui.tooling)
   debugImplementation(libs.androidx.compose.ui.test.manifest)
 
   ksp(libs.hilt.compiler)
+  ksp(libs.androidx.room.compiler)
   coreLibraryDesugaring(libs.desugar.jdk.libs)
 
   testImplementation(libs.junit)
   testImplementation(libs.kotlinx.coroutines.test)
+
+  androidTestImplementation(libs.junit)
+  androidTestImplementation(libs.kotlinx.coroutines.test)
+  androidTestImplementation(libs.androidx.test.core)
+  androidTestImplementation(libs.androidx.test.runner)
+  androidTestImplementation(libs.androidx.test.ext.junit)
+  androidTestImplementation(libs.androidx.room.testing)
 }
