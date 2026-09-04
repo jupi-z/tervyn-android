@@ -78,10 +78,15 @@ class SyncViewModel @Inject constructor(
 
     private fun AppError.toSyncMessage(): String = when (this) {
         is AppError.InvalidState -> if (code == "offline_simulation") {
-            "Simulation hors connexion active. Repassez la simulation en ligne pour synchroniser."
+            "Simulation hors connexion active. Repassez la simulation en ligne pour vérifier la file locale."
         } else {
-            "Synchronisation déjà en cours."
+            "Traitement local déjà en cours."
         }
-        else -> "La simulation de synchronisation a échoué."
+        is AppError.Network -> if (code == "remote_sync_not_configured") {
+            "Aucun serveur distant n'est configuré en Phase 2."
+        } else {
+            "Synchronisation distante indisponible."
+        }
+        else -> "La vérification de la file locale a échoué."
     }
 }

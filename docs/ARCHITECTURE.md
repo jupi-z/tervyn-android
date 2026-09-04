@@ -2,7 +2,9 @@
 
 ## Status
 
-Phase 1 implements an architecture foundation inside the existing `:app` module. It does not add real persistence, networking, background sync or secure authentication.
+Phase 2 implements the local offline data foundation inside the existing single `:app` module. Room is now the local source of truth for field data and the persistent local outbox.
+
+Remote API, WorkManager queue processing, secure token storage, real authentication, remote photo upload, and server conflict resolution are not implemented.
 
 ## Dependency Rule
 
@@ -10,42 +12,51 @@ Phase 1 implements an architecture foundation inside the existing `:app` module.
 Compose UI
    -> ViewModel
       -> Use Case
-         -> Repository contract
-            <- In-memory data implementation
+         -> Repository Contract
+            <- Room Repository
+               -> Room Database
+                  -> Business tables
+                  -> Persistent Outbox
 ```
 
-The Domain layer is independent from Android UI, Compose, Hilt, Room and network libraries. Feature ViewModels depend on use cases or small application contracts. Data implementations depend on Domain contracts and are bound with Hilt.
+The Domain layer remains pure Kotlin and independent from Android UI, Compose, Hilt, Room, and network libraries. Feature ViewModels continue to depend on use cases or small application contracts; they do not import Room entities, DAOs, or `TervynDatabase`.
 
 ## Packages
 
-- `app/`: root application state and app-level contracts.
+- `app/`: root application state, startup initialization contract, and app-level contracts.
 - `core/result/`: `AppResult` and `AppError`.
 - `core/time/`: clock and presentation date/time formatting utilities.
 - `domain/model/`: business models and enums.
 - `domain/repository/`: repository contracts.
-- `domain/usecase/`: use cases for existing actions.
-- `data/fixtures/`: in-memory fixture data.
-- `data/inmemory/`: temporary repository implementations.
+- `domain/usecase/`: use cases for current application actions.
+- `data/fixtures/`: local demo fixture source used only by the one-time Room seed.
+- `data/inmemory/`: simulated auth, theme, and offline UI state only.
+- `data/local/converter/`: Room type converters.
+- `data/local/entity/`: Room entities and local outbox enums.
+- `data/local/dao/`: focused DAOs for Room tables.
+- `data/local/db/`: `TervynDatabase`.
+- `data/local/mapper/`: Domain/Entity mapping.
+- `data/local/relation/`: Room relation projections.
+- `data/local/repository/`: Room-backed repository implementations.
+- `data/local/seed/`: one-time local seed initialization.
 - `di/`: Hilt bindings and providers.
 - `feature/`: screens and ViewModels.
-- `navigation/`: root, auth and app navigation graphs.
+- `navigation/`: root, auth, and app navigation graphs.
 
-## In-memory Implementation
+## Local Source Of Truth
 
-The current data source is intentionally in-memory. `InMemoryJobRepository`, `InMemoryAuthRepository`, `InMemorySyncRepository` and `InMemoryUserPreferencesRepository` are singleton Hilt bindings used to preserve the prototype behavior while making the UI independent from the temporary storage mechanism.
+`RoomJobRepository` implements `JobRepository` and reads/writes jobs, checklist items, notes, and attachment metadata through Room. `observeJobs()` and `observeJob(jobId)` are backed by Room Flow queries, so UI state updates after local transactions without manual refresh.
 
-In-memory repositories share `InMemoryStore` as temporary internal storage. Repositories do not depend directly on other concrete in-memory repositories.
+`RoomSyncRepository` implements `SyncRepository` from the persistent outbox counters in `SyncOperationDao`. It reports local pending/failed operations and does not mark anything synchronized because no remote sync engine exists in Phase 2.
 
-`TervynDemoFixtures` contains only fixture data. It is not a repository and is not called by production screens. Runtime author resolution is handled by use cases: `AddNoteUseCase` and `AddAttachmentUseCase` read the authenticated user from `AuthRepository` and pass `authorUserId` explicitly to `JobRepository`.
+## Startup Initialization
 
-## Future Room Replacement
+`RoomDatabaseSeeder` implements `LocalDataInitializer`. `TervynAppViewModel` keeps the app in `AuthState.Checking` so Bootstrap remains visible until Room opens and the one-time seed completes.
 
-Room will be introduced in a later phase by adding persistence implementations behind the existing repository contracts. The UI, ViewModels and use cases should not need to know whether jobs come from in-memory flows or Room-backed flows.
+## Explicit Non-Goals
 
-## Future Retrofit Replacement
-
-Retrofit and DTO mapping will be introduced behind remote data sources in a later phase. Domain models remain separate from transport DTOs.
-
-## Future WorkManager / Outbox
-
-The sync screen is still a UI simulation. A real outbox and WorkManager-based synchronization engine are not implemented in Phase 1. They should be added behind sync/data abstractions in the offline-first phase.
+- Remote API: NOT IMPLEMENTED.
+- WorkManager queue processing: NOT IMPLEMENTED.
+- Real authentication/session persistence: NOT IMPLEMENTED.
+- Remote photo upload: NOT IMPLEMENTED.
+- Server conflict resolution: NOT IMPLEMENTED.

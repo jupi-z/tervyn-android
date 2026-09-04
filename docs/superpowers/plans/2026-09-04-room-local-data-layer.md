@@ -88,8 +88,8 @@
 - Create: `app/src/main/java/dev/amenokizele/tervyn/data/local/repository/RoomSyncRepository.kt`
 - Modify: `app/src/main/java/dev/amenokizele/tervyn/di/RepositoryModule.kt`
 - Modify: `app/src/main/java/dev/amenokizele/tervyn/data/inmemory/InMemoryStore.kt`
-- Delete or move from production: `app/src/main/java/dev/amenokizele/tervyn/data/inmemory/InMemoryJobRepository.kt`
-- Delete or move from production: `app/src/main/java/dev/amenokizele/tervyn/data/inmemory/InMemorySyncRepository.kt`
+- Delete or move from production: legacy in-memory job repository file
+- Delete or move from production: legacy in-memory sync repository file
 - Create: `app/src/androidTest/java/dev/amenokizele/tervyn/data/local/repository/RoomJobRepositoryTest.kt`
 - Create: `app/src/androidTest/java/dev/amenokizele/tervyn/data/local/repository/RoomSyncRepositoryTest.kt`
 

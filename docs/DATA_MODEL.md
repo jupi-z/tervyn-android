@@ -2,110 +2,233 @@
 
 ## Status
 
-Phase 1 defines Domain models with real `java.time.Instant` timestamps. These are not Room entities and are not network DTOs.
+Phase 2 defines the first persistent Room schema for Tervyn Android.
 
-## User
+- Database file: `tervyn.db`
+- Room schema version: `1`
+- Schema export path: `app/schemas/dev.amenokizele.tervyn.data.local.db.TervynDatabase/1.json`
+- Remote conflict resolution: NOT IMPLEMENTED YET
 
-Represents the authenticated field user in the app session.
+## Tables
 
-- `id`
+### users
+
+Primary key: `id`.
+
+Columns:
+
+- `id: String`
+- `email: String`
+- `firstName: String`
+- `lastName: String`
+- `jobTitle: String?`
+- `avatarUrl: String?`
+- `createdAt: Instant?`
+- `updatedAt: Instant?`
+- `lastSyncedAt: Instant?`
+
+Indexes:
+
 - `email`
-- `firstName`
-- `lastName`
-- `jobTitle`
-- `avatarUrl`
-- `createdAt`
-- `updatedAt`
-- `lastSyncedAt`
 
-## Job
+### jobs
 
-Represents an intervention assigned to a field user.
+Primary key: `id`.
 
-- `id`
-- `reference`
-- `title`
-- `description`
-- `clientName`
-- `siteName`
-- `siteAddress`
-- `priority`
+Columns:
+
+- `id: String`
+- `reference: String`
+- `title: String`
+- `description: String?`
+- `clientName: String`
+- `siteName: String`
+- `siteAddress: String?`
+- `priority: JobPriority`
+- `status: JobStatus`
+- `scheduledAt: Instant`
+- `startedAt: Instant?`
+- `completedAt: Instant?`
+- `serverVersion: Long`
+- `syncState: SyncState`
+- `createdAt: Instant`
+- `updatedAt: Instant`
+- `lastSyncedAt: Instant?`
+
+Indexes:
+
+- `reference` unique
 - `status`
 - `scheduledAt`
-- `startedAt`
-- `completedAt`
-- `serverVersion`
 - `syncState`
-- `createdAt`
-- `updatedAt`
-- `lastSyncedAt`
-- `checklist`
-- `notes`
-- `attachments`
 
-Allowed status transitions:
+Allowed status transitions are enforced in `RoomJobRepository`:
 
 ```text
 ASSIGNED -> IN_PROGRESS -> COMPLETED
 ```
 
-## ChecklistItem
+### checklist_items
 
-Represents one checklist task attached to a job.
+Primary key: `id`.
 
-- `id`
+Foreign key:
+
+- `jobId -> jobs.id ON DELETE CASCADE`
+
+Columns:
+
+- `id: String`
+- `jobId: String`
+- `label: String`
+- `position: Int`
+- `required: Boolean`
+- `completed: Boolean`
+- `completedAt: Instant?`
+- `serverVersion: Long`
+- `syncState: SyncState`
+- `updatedAt: Instant`
+
+Indexes:
+
 - `jobId`
-- `label`
-- `position`
-- `required`
-- `completed`
-- `completedAt`
-- `serverVersion`
+- `(jobId, position)` unique
 - `syncState`
-- `updatedAt`
 
-## Note
+### notes
 
-Represents a note created during an in-progress job.
+Primary key: `id`.
 
-- `id`
+Foreign key:
+
+- `jobId -> jobs.id ON DELETE CASCADE`
+
+`authorUserId` is stored as a logical reference to preserve note history without destructive user cascades.
+
+Columns:
+
+- `id: String`
+- `jobId: String`
+- `authorUserId: String`
+- `content: String`
+- `createdAt: Instant`
+- `updatedAt: Instant`
+- `syncState: SyncState`
+- `serverVersion: Long?`
+- `deletedAt: Instant?`
+
+Indexes:
+
 - `jobId`
 - `authorUserId`
-- `content`
-- `createdAt`
-- `updatedAt`
 - `syncState`
-- `serverVersion`
-- `deletedAt`
+- `createdAt`
 
-## Attachment
+### attachments
 
-Represents a job attachment. Phase 1 supports only `AttachmentType.PHOTO`.
+Primary key: `id`.
 
-- `id`
+Foreign key:
+
+- `jobId -> jobs.id ON DELETE CASCADE`
+
+Room stores attachment metadata and local URI strings only. It does not store bitmaps, byte arrays, or photo blobs.
+
+Columns:
+
+- `id: String`
+- `jobId: String`
+- `authorUserId: String`
+- `type: AttachmentType`
+- `localUri: String?`
+- `remoteUrl: String?`
+- `mimeType: String`
+- `fileName: String?`
+- `sizeBytes: Long`
+- `checksumSha256: String?`
+- `syncState: SyncState`
+- `createdAt: Instant`
+- `uploadedAt: Instant?`
+- `deletedAt: Instant?`
+
+Indexes:
+
 - `jobId`
 - `authorUserId`
-- `type`
-- `localUri`
-- `remoteUrl`
-- `mimeType`
-- `fileName`
-- `sizeBytes`
-- `checksumSha256`
 - `syncState`
 - `createdAt`
-- `uploadedAt`
-- `deletedAt`
 
-`localUri` is a string placeholder in Phase 1. No Android `Uri`, bitmap, drawable or file handle is stored in Domain.
+Soft delete:
 
-## NOT IMPLEMENTED YET
+- `deleteAttachment()` sets `deletedAt = now` and `syncState = PENDING`.
+- Soft-deleted attachments remain in Room for future remote delete processing.
+- Normal `Job.attachments` mapping hides rows where `deletedAt != null`.
 
-- Room entity mapping.
-- DAO layer.
-- SQLite persistence.
-- `SyncOperationEntity`.
-- Persistent outbox.
-- Remote DTO mapping.
-- Conflict resolution.
-- Real `serverVersion` reconciliation.
+### sync_operations
+
+Primary key: `id`.
+
+This is a persistent local outbox only. No worker processes it in Phase 2.
+
+Columns:
+
+- `id: String`
+- `entityType: SyncEntityType`
+- `entityId: String`
+- `operation: SyncOperationType`
+- `clientMutationId: String`
+- `status: SyncOperationStatus`
+- `attemptCount: Int`
+- `lastErrorCode: String?`
+- `lastErrorMessage: String?`
+- `createdAt: Instant`
+- `lastAttemptAt: Instant?`
+- `nextAttemptAt: Instant?`
+
+Indexes:
+
+- `status`
+- `createdAt`
+- `(entityType, entityId)`
+- `clientMutationId` unique
+
+Outbox enums:
+
+- `SyncEntityType`: `JOB`, `CHECKLIST_ITEM`, `NOTE`, `ATTACHMENT`
+- `SyncOperationType`: `UPDATE`, `CREATE`, `DELETE`, `UPLOAD`
+- `SyncOperationStatus`: `PENDING`, `PROCESSING`, `FAILED`
+
+### local_metadata
+
+Infrastructure-only table.
+
+Primary key: `key`.
+
+Columns:
+
+- `key: String`
+- `value: String`
+- `updatedAt: Instant`
+
+Current seed marker:
+
+- `key = demo_seed_version`
+- `value = 1`
+
+## Sync State Rules
+
+- One-time seeded fixture rows are stored as `SYNCED`.
+- Every local business mutation writes the changed row as `PENDING`.
+- Every local business mutation also writes one outbox row in the same Room transaction.
+- No mutation is marked `SYNCED` without real remote processing.
+
+## Transaction Rules
+
+The repository validates current state, mutates business rows, and inserts the outbox row inside one Room transaction. If outbox insertion fails, the business mutation rolls back.
+
+## Time And IDs
+
+- Domain timestamps remain `java.time.Instant`.
+- Room stores `Instant` values as epoch milliseconds through type converters.
+- New note IDs, attachment IDs, sync operation IDs, and `clientMutationId` values are full UUID strings in production.
+- `serverVersion` is persisted for future server reconciliation, but real reconciliation is not implemented yet.
