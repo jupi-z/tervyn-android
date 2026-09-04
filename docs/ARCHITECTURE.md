@@ -34,7 +34,9 @@ The Domain layer is independent from Android UI, Compose, Hilt, Room and network
 
 The current data source is intentionally in-memory. `InMemoryJobRepository`, `InMemoryAuthRepository`, `InMemorySyncRepository` and `InMemoryUserPreferencesRepository` are singleton Hilt bindings used to preserve the prototype behavior while making the UI independent from the temporary storage mechanism.
 
-`TervynDemoFixtures` contains only fixture data. It is not a repository and is not called by production screens.
+In-memory repositories share `InMemoryStore` as temporary internal storage. Repositories do not depend directly on other concrete in-memory repositories.
+
+`TervynDemoFixtures` contains only fixture data. It is not a repository and is not called by production screens. Runtime author resolution is handled by use cases: `AddNoteUseCase` and `AddAttachmentUseCase` read the authenticated user from `AuthRepository` and pass `authorUserId` explicitly to `JobRepository`.
 
 ## Future Room Replacement
 

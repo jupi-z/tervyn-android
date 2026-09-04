@@ -35,6 +35,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.amenokizele.tervyn.R
+import dev.amenokizele.tervyn.domain.model.Job
 import dev.amenokizele.tervyn.domain.model.JobStatus
 import dev.amenokizele.tervyn.domain.model.ThemeMode
 import dev.amenokizele.tervyn.ui.components.InlineMessage
@@ -42,6 +43,7 @@ import dev.amenokizele.tervyn.ui.components.InlineMessageType
 import dev.amenokizele.tervyn.ui.components.TervynPrimaryButton
 import dev.amenokizele.tervyn.ui.components.TervynSecondaryButton
 import dev.amenokizele.tervyn.ui.components.TervynTopAppBar
+import dev.amenokizele.tervyn.ui.preview.TervynPreviewData
 import dev.amenokizele.tervyn.ui.theme.Spacing
 import dev.amenokizele.tervyn.ui.theme.TervynTheme
 import kotlinx.coroutines.launch
@@ -61,6 +63,30 @@ fun CompleteJobScreen(
     LaunchedEffect(jobId) {
         viewModel.loadJob(jobId)
     }
+
+    CompleteJobContent(
+        job = job,
+        onBackClick = onBackClick,
+        onCompleteClick = {
+            scope.launch {
+                val success = viewModel.completeJob(jobId)
+                if (success) {
+                    onJobCompleted()
+                }
+            }
+        },
+        modifier = modifier
+    )
+}
+
+@Composable
+private fun CompleteJobContent(
+    job: Job?,
+    onBackClick: () -> Unit,
+    onCompleteClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val canComplete = job?.status == JobStatus.IN_PROGRESS && job.allRequiredCompleted
 
     Scaffold(
         topBar = {
@@ -155,14 +181,7 @@ fun CompleteJobScreen(
 
                 TervynPrimaryButton(
                     text = stringResource(R.string.action_complete_job),
-                    onClick = {
-                        scope.launch {
-                            val success = viewModel.completeJob(jobId)
-                            if (success) {
-                                onJobCompleted()
-                            }
-                        }
-                    },
+                    onClick = onCompleteClick,
                     enabled = canComplete,
                     icon = Icons.Default.CheckCircle,
                     testTag = "confirm_complete_job_button"
@@ -206,10 +225,10 @@ private fun SummaryRow(label: String, value: String) {
 @Composable
 private fun CompleteJobScreenPreviewLight() {
     TervynTheme(themeMode = ThemeMode.LIGHT) {
-        CompleteJobScreen(
-            jobId = "job-003",
+        CompleteJobContent(
+            job = TervynPreviewData.inProgressJob,
             onBackClick = {},
-            onJobCompleted = {}
+            onCompleteClick = {}
         )
     }
 }
@@ -218,10 +237,10 @@ private fun CompleteJobScreenPreviewLight() {
 @Composable
 private fun CompleteJobScreenPreviewDark() {
     TervynTheme(themeMode = ThemeMode.DARK) {
-        CompleteJobScreen(
-            jobId = "job-003",
+        CompleteJobContent(
+            job = TervynPreviewData.inProgressJob,
             onBackClick = {},
-            onJobCompleted = {}
+            onCompleteClick = {}
         )
     }
 }

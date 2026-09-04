@@ -16,9 +16,13 @@ interface JobRepository {
 
     suspend fun toggleChecklistItem(jobId: String, checklistItemId: String): AppResult<Unit>
 
-    suspend fun addNote(jobId: String, content: String): AppResult<Note>
+    suspend fun addNote(jobId: String, authorUserId: String, content: String): AppResult<Note>
 
-    suspend fun addAttachment(jobId: String, request: AddAttachmentRequest): AppResult<Attachment>
+    suspend fun addAttachment(
+        jobId: String,
+        authorUserId: String,
+        request: AddAttachmentRequest
+    ): AppResult<Attachment>
 
     suspend fun deleteAttachment(jobId: String, attachmentId: String): AppResult<Unit>
 

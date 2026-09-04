@@ -132,9 +132,7 @@ fun TervynNavGraph(
             popExitTransition = { fadeOut(animationSpec = tween(200)) }
         ) {
             composable(TervynDestination.Bootstrap.route) {
-                BootstrapScreen(
-                    onNavigateToLogin = {}
-                )
+                BootstrapScreen()
             }
 
             navigation(

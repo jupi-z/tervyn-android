@@ -31,8 +31,10 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.amenokizele.tervyn.R
+import dev.amenokizele.tervyn.domain.model.Job
 import dev.amenokizele.tervyn.domain.model.JobStatus
 import dev.amenokizele.tervyn.domain.model.ThemeMode
+import dev.amenokizele.tervyn.ui.preview.TervynPreviewData
 import dev.amenokizele.tervyn.ui.components.InlineMessage
 import dev.amenokizele.tervyn.ui.components.InlineMessageType
 import dev.amenokizele.tervyn.ui.components.TervynOutlinedTextField
@@ -60,6 +62,42 @@ fun AddNoteScreen(
     LaunchedEffect(jobId) {
         viewModel.loadJob(jobId)
     }
+
+    AddNoteContent(
+        job = job,
+        noteContent = noteContent,
+        isError = isError,
+        onNoteContentChange = {
+            noteContent = it
+            if (isError && it.isNotBlank()) isError = false
+        },
+        onSubmit = {
+            if (noteContent.isBlank()) {
+                isError = true
+            } else {
+                scope.launch {
+                    if (viewModel.addNote(jobId, noteContent)) {
+                        onNoteAdded()
+                    }
+                }
+            }
+        },
+        onBackClick = onBackClick,
+        modifier = modifier
+    )
+}
+
+@Composable
+private fun AddNoteContent(
+    job: Job?,
+    noteContent: String,
+    isError: Boolean,
+    onNoteContentChange: (String) -> Unit,
+    onSubmit: () -> Unit,
+    onBackClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val canEdit = job?.status == JobStatus.IN_PROGRESS
 
     Scaffold(
         topBar = {
@@ -111,10 +149,7 @@ fun AddNoteScreen(
 
                 TervynOutlinedTextField(
                     value = noteContent,
-                    onValueChange = {
-                        noteContent = it
-                        if (isError && it.isNotBlank()) isError = false
-                    },
+                    onValueChange = onNoteContentChange,
                     label = stringResource(R.string.add_note_label),
                     placeholder = stringResource(R.string.add_note_placeholder),
                     singleLine = false,
@@ -130,17 +165,7 @@ fun AddNoteScreen(
 
                 TervynPrimaryButton(
                     text = stringResource(R.string.action_add_note),
-                    onClick = {
-                        if (noteContent.isBlank()) {
-                            isError = true
-                        } else {
-                            scope.launch {
-                                if (viewModel.addNote(jobId, noteContent)) {
-                                    onNoteAdded()
-                                }
-                            }
-                        }
-                    },
+                    onClick = onSubmit,
                     enabled = canEdit,
                     testTag = "submit_note_button"
                 )
@@ -161,10 +186,13 @@ fun AddNoteScreen(
 @Composable
 private fun AddNoteScreenPreviewLight() {
     TervynTheme(themeMode = ThemeMode.LIGHT) {
-        AddNoteScreen(
-            jobId = "job-001",
-            onBackClick = {},
-            onNoteAdded = {}
+        AddNoteContent(
+            job = TervynPreviewData.inProgressJob,
+            noteContent = "",
+            isError = false,
+            onNoteContentChange = {},
+            onSubmit = {},
+            onBackClick = {}
         )
     }
 }
@@ -173,10 +201,13 @@ private fun AddNoteScreenPreviewLight() {
 @Composable
 private fun AddNoteScreenPreviewDark() {
     TervynTheme(themeMode = ThemeMode.DARK) {
-        AddNoteScreen(
-            jobId = "job-001",
-            onBackClick = {},
-            onNoteAdded = {}
+        AddNoteContent(
+            job = TervynPreviewData.inProgressJob,
+            noteContent = "Contrôle visuel terminé, RAS.",
+            isError = false,
+            onNoteContentChange = {},
+            onSubmit = {},
+            onBackClick = {}
         )
     }
 }

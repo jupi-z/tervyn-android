@@ -44,6 +44,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.amenokizele.tervyn.R
+import dev.amenokizele.tervyn.domain.model.Job
 import dev.amenokizele.tervyn.domain.model.JobStatus
 import dev.amenokizele.tervyn.domain.model.ThemeMode
 import dev.amenokizele.tervyn.ui.components.InlineMessage
@@ -52,6 +53,7 @@ import dev.amenokizele.tervyn.ui.components.TervynOutlinedTextField
 import dev.amenokizele.tervyn.ui.components.TervynPrimaryButton
 import dev.amenokizele.tervyn.ui.components.TervynSecondaryButton
 import dev.amenokizele.tervyn.ui.components.TervynTopAppBar
+import dev.amenokizele.tervyn.ui.preview.TervynPreviewData
 import dev.amenokizele.tervyn.ui.theme.Spacing
 import dev.amenokizele.tervyn.ui.theme.TervynTheme
 import kotlinx.coroutines.launch
@@ -75,6 +77,61 @@ fun AddPhotoScreen(
     LaunchedEffect(jobId) {
         viewModel.loadJob(jobId)
     }
+
+    val defaultPhotoTitle = stringResource(R.string.add_photo_default_title)
+    val defaultFieldPhotoTitle = stringResource(R.string.add_photo_default_field)
+    val defaultGalleryPhotoTitle = stringResource(R.string.add_photo_default_gallery)
+    val categories = listOf(
+        "CABLING" to stringResource(R.string.add_photo_category_cabling),
+        "DEVICE" to stringResource(R.string.add_photo_category_device),
+        "ENVIRONMENT" to stringResource(R.string.add_photo_category_environment),
+        "REPORT" to stringResource(R.string.add_photo_category_report)
+    )
+
+    AddPhotoContent(
+        job = job,
+        photoTitle = photoTitle,
+        selectedTag = selectedTag,
+        selectedSource = selectedSource,
+        categories = categories,
+        onPhotoTitleChange = { photoTitle = it },
+        onSourceSelected = { source ->
+            selectedSource = source
+            if (photoTitle.isBlank()) {
+                photoTitle = if (source == "GALLERY") defaultGalleryPhotoTitle else defaultFieldPhotoTitle
+            }
+        },
+        onCategorySelected = { tag, label ->
+            selectedTag = tag
+            photoTitle = label
+        },
+        onSubmit = {
+            scope.launch {
+                if (viewModel.addPhoto(jobId, photoTitle.ifBlank { defaultPhotoTitle }, selectedTag)) {
+                    onPhotoAdded()
+                }
+            }
+        },
+        onBackClick = onBackClick,
+        modifier = modifier
+    )
+}
+
+@Composable
+private fun AddPhotoContent(
+    job: Job?,
+    photoTitle: String,
+    selectedTag: String,
+    selectedSource: String,
+    categories: List<Pair<String, String>>,
+    onPhotoTitleChange: (String) -> Unit,
+    onSourceSelected: (String) -> Unit,
+    onCategorySelected: (tag: String, label: String) -> Unit,
+    onSubmit: () -> Unit,
+    onBackClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val canEdit = job?.status == JobStatus.IN_PROGRESS
 
     Scaffold(
         topBar = {
@@ -116,10 +173,6 @@ fun AddPhotoScreen(
                     )
                 }
 
-                val defaultFieldPhotoTitle = stringResource(R.string.add_photo_default_field)
-                val defaultGalleryPhotoTitle = stringResource(R.string.add_photo_default_gallery)
-                val defaultPhotoTitle = stringResource(R.string.add_photo_default_title)
-
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(Spacing.sm)
@@ -129,10 +182,7 @@ fun AddPhotoScreen(
                         label = stringResource(R.string.add_photo_take),
                         isSelected = selectedSource == "CAMERA",
                         enabled = canEdit,
-                        onClick = {
-                            selectedSource = "CAMERA"
-                            if (photoTitle.isBlank()) photoTitle = defaultFieldPhotoTitle
-                        },
+                        onClick = { onSourceSelected("CAMERA") },
                         modifier = Modifier.weight(1f)
                     )
                     SourceTile(
@@ -140,10 +190,7 @@ fun AddPhotoScreen(
                         label = stringResource(R.string.add_photo_gallery),
                         isSelected = selectedSource == "GALLERY",
                         enabled = canEdit,
-                        onClick = {
-                            selectedSource = "GALLERY"
-                            if (photoTitle.isBlank()) photoTitle = defaultGalleryPhotoTitle
-                        },
+                        onClick = { onSourceSelected("GALLERY") },
                         modifier = Modifier.weight(1f)
                     )
                 }
@@ -156,13 +203,6 @@ fun AddPhotoScreen(
                     color = MaterialTheme.colorScheme.onSurface
                 )
                 Spacer(modifier = Modifier.height(Spacing.xs))
-
-                val categories = listOf(
-                    "CABLING" to stringResource(R.string.add_photo_category_cabling),
-                    "DEVICE" to stringResource(R.string.add_photo_category_device),
-                    "ENVIRONMENT" to stringResource(R.string.add_photo_category_environment),
-                    "REPORT" to stringResource(R.string.add_photo_category_report)
-                )
 
                 Column(verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
                     categories.forEach { (tag, label) ->
@@ -178,8 +218,7 @@ fun AddPhotoScreen(
                                     RoundedCornerShape(8.dp)
                                 )
                                 .clickable(enabled = canEdit) {
-                                    selectedTag = tag
-                                    photoTitle = label
+                                    onCategorySelected(tag, label)
                                 }
                                 .padding(horizontal = Spacing.md, vertical = Spacing.sm),
                             verticalAlignment = Alignment.CenterVertically
@@ -199,7 +238,7 @@ fun AddPhotoScreen(
 
                 TervynOutlinedTextField(
                     value = photoTitle,
-                    onValueChange = { photoTitle = it },
+                    onValueChange = onPhotoTitleChange,
                     label = stringResource(R.string.add_photo_caption_label),
                     placeholder = stringResource(R.string.add_photo_caption_placeholder),
                     singleLine = true,
@@ -211,13 +250,7 @@ fun AddPhotoScreen(
 
                 TervynPrimaryButton(
                     text = stringResource(R.string.action_add_photo),
-                    onClick = {
-                        scope.launch {
-                            if (viewModel.addPhoto(jobId, photoTitle.ifBlank { defaultPhotoTitle }, selectedTag)) {
-                                onPhotoAdded()
-                            }
-                        }
-                    },
+                    onClick = onSubmit,
                     enabled = canEdit,
                     testTag = "save_photo_button"
                 )
@@ -281,10 +314,17 @@ private fun SourceTile(
 @Composable
 private fun AddPhotoScreenPreviewLight() {
     TervynTheme(themeMode = ThemeMode.LIGHT) {
-        AddPhotoScreen(
-            jobId = "job-001",
-            onBackClick = {},
-            onPhotoAdded = {}
+        AddPhotoContent(
+            job = TervynPreviewData.inProgressJob,
+            photoTitle = "Photo terrain",
+            selectedTag = "CABLING",
+            selectedSource = "CAMERA",
+            categories = previewPhotoCategories(),
+            onPhotoTitleChange = {},
+            onSourceSelected = {},
+            onCategorySelected = { _, _ -> },
+            onSubmit = {},
+            onBackClick = {}
         )
     }
 }
@@ -293,10 +333,25 @@ private fun AddPhotoScreenPreviewLight() {
 @Composable
 private fun AddPhotoScreenPreviewDark() {
     TervynTheme(themeMode = ThemeMode.DARK) {
-        AddPhotoScreen(
-            jobId = "job-001",
-            onBackClick = {},
-            onPhotoAdded = {}
+        AddPhotoContent(
+            job = TervynPreviewData.inProgressJob,
+            photoTitle = "Câblage salle serveurs",
+            selectedTag = "DEVICE",
+            selectedSource = "GALLERY",
+            categories = previewPhotoCategories(),
+            onPhotoTitleChange = {},
+            onSourceSelected = {},
+            onCategorySelected = { _, _ -> },
+            onSubmit = {},
+            onBackClick = {}
         )
     }
 }
+
+@Composable
+private fun previewPhotoCategories() = listOf(
+    "CABLING" to stringResource(R.string.add_photo_category_cabling),
+    "DEVICE" to stringResource(R.string.add_photo_category_device),
+    "ENVIRONMENT" to stringResource(R.string.add_photo_category_environment),
+    "REPORT" to stringResource(R.string.add_photo_category_report)
+)

@@ -2,6 +2,7 @@ package dev.amenokizele.tervyn.data.inmemory
 
 import dev.amenokizele.tervyn.core.result.AppError
 import dev.amenokizele.tervyn.core.result.AppResult
+import dev.amenokizele.tervyn.core.time.TervynClock
 import dev.amenokizele.tervyn.di.DefaultDispatcher
 import dev.amenokizele.tervyn.domain.model.SyncOverview
 import dev.amenokizele.tervyn.domain.model.SyncState
@@ -17,7 +18,7 @@ import javax.inject.Singleton
 @Singleton
 class InMemorySyncRepository @Inject constructor(
     private val store: InMemoryStore,
-    private val jobRepository: InMemoryJobRepository,
+    private val clock: TervynClock,
     @param:DefaultDispatcher private val dispatcher: CoroutineDispatcher
 ) : SyncRepository {
     override val overview: Flow<SyncOverview> = combine(
@@ -51,7 +52,7 @@ class InMemorySyncRepository @Inject constructor(
         }
         store.isSyncingValue = true
         delay(600)
-        jobRepository.markAllPendingSynced()
+        store.markAllPendingSynced(clock.now())
         store.isSyncingValue = false
         AppResult.Success(Unit)
     }

@@ -46,11 +46,13 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.amenokizele.tervyn.R
 import dev.amenokizele.tervyn.core.time.TervynDateTimeFormatter
+import dev.amenokizele.tervyn.domain.model.Job
 import dev.amenokizele.tervyn.domain.model.JobStatus
 import dev.amenokizele.tervyn.domain.model.ThemeMode
 import dev.amenokizele.tervyn.ui.components.EmptyState
 import dev.amenokizele.tervyn.ui.components.SyncStateIndicator
 import dev.amenokizele.tervyn.ui.components.TervynPrimaryButton
+import dev.amenokizele.tervyn.ui.preview.TervynPreviewData
 import dev.amenokizele.tervyn.ui.theme.ButtonShape
 import dev.amenokizele.tervyn.ui.theme.Spacing
 import dev.amenokizele.tervyn.ui.theme.TervynTheme
@@ -67,13 +69,36 @@ fun PhotoViewerScreen(
 ) {
     val job by viewModel.job.collectAsStateWithLifecycle()
     val scope = rememberCoroutineScope()
-    val dateTimeFormatter = remember { TervynDateTimeFormatter() }
-    var isConfirmingDelete by remember { mutableStateOf(false) }
 
     LaunchedEffect(jobId) {
         viewModel.loadJob(jobId)
     }
 
+    PhotoViewerContent(
+        job = job,
+        photoId = photoId,
+        onBackClick = onBackClick,
+        onDeleteConfirmed = {
+            scope.launch {
+                if (viewModel.deletePhoto(jobId, photoId)) {
+                    onPhotoDeleted()
+                }
+            }
+        },
+        modifier = modifier
+    )
+}
+
+@Composable
+private fun PhotoViewerContent(
+    job: Job?,
+    photoId: String,
+    onBackClick: () -> Unit,
+    onDeleteConfirmed: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val dateTimeFormatter = remember { TervynDateTimeFormatter() }
+    var isConfirmingDelete by remember { mutableStateOf(false) }
     val photo = job?.attachments?.find { it.id == photoId }
     val canDelete = job?.status == JobStatus.IN_PROGRESS
     val backLabel = stringResource(R.string.action_back)
@@ -221,13 +246,8 @@ fun PhotoViewerScreen(
                             }
                             OutlinedButton(
                                 onClick = {
-                                    scope.launch {
-                                        if (viewModel.deletePhoto(jobId, photoId)) {
-                                            onPhotoDeleted()
-                                        } else {
-                                            isConfirmingDelete = false
-                                        }
-                                    }
+                                    onDeleteConfirmed()
+                                    isConfirmingDelete = false
                                 },
                                 shape = ButtonShape,
                                 colors = ButtonDefaults.outlinedButtonColors(
@@ -271,11 +291,11 @@ fun PhotoViewerScreen(
 @Composable
 private fun PhotoViewerScreenPreview() {
     TervynTheme(themeMode = ThemeMode.DARK) {
-        PhotoViewerScreen(
-            jobId = "job-003",
-            photoId = "p3-1",
+        PhotoViewerContent(
+            job = TervynPreviewData.inProgressJob,
+            photoId = "preview-photo-1",
             onBackClick = {},
-            onPhotoDeleted = {}
+            onDeleteConfirmed = {}
         )
     }
 }

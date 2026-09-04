@@ -3,7 +3,6 @@ package dev.amenokizele.tervyn.data.inmemory
 import dev.amenokizele.tervyn.core.result.AppError
 import dev.amenokizele.tervyn.core.result.AppResult
 import dev.amenokizele.tervyn.core.time.TervynClock
-import dev.amenokizele.tervyn.data.fixtures.TervynDemoFixtures
 import dev.amenokizele.tervyn.domain.model.AddAttachmentRequest
 import dev.amenokizele.tervyn.domain.model.Attachment
 import dev.amenokizele.tervyn.domain.model.Job
@@ -80,7 +79,7 @@ class InMemoryJobRepository @Inject constructor(
         return AppResult.Success(Unit)
     }
 
-    override suspend fun addNote(jobId: String, content: String): AppResult<Note> {
+    override suspend fun addNote(jobId: String, authorUserId: String, content: String): AppResult<Note> {
         val trimmedContent = content.trim()
         if (trimmedContent.isBlank()) {
             return AppResult.Failure(AppError.Validation("note_content_required"))
@@ -89,7 +88,7 @@ class InMemoryJobRepository @Inject constructor(
         val note = Note(
             id = "note-${UUID.randomUUID().toString().take(8)}",
             jobId = jobId,
-            authorUserId = TervynDemoFixtures.CURRENT_USER_ID,
+            authorUserId = authorUserId,
             content = trimmedContent,
             createdAt = now,
             updatedAt = now,
@@ -114,13 +113,14 @@ class InMemoryJobRepository @Inject constructor(
 
     override suspend fun addAttachment(
         jobId: String,
+        authorUserId: String,
         request: AddAttachmentRequest
     ): AppResult<Attachment> {
         val now = clock.now()
         val attachment = Attachment(
             id = "photo-${UUID.randomUUID().toString().take(8)}",
             jobId = jobId,
-            authorUserId = TervynDemoFixtures.CURRENT_USER_ID,
+            authorUserId = authorUserId,
             type = request.type,
             localUri = request.localUri,
             remoteUrl = null,
@@ -185,27 +185,6 @@ class InMemoryJobRepository @Inject constructor(
             )
         )
         return AppResult.Success(Unit)
-    }
-
-    internal fun markAllPendingSynced() {
-        val now = clock.now()
-        store.jobsValue = store.jobsValue.map { job ->
-            job.copy(
-                syncState = SyncState.SYNCED,
-                updatedAt = now,
-                lastSyncedAt = now,
-                checklist = job.checklist.map {
-                    it.copy(syncState = SyncState.SYNCED, updatedAt = now)
-                },
-                notes = job.notes.map {
-                    it.copy(syncState = SyncState.SYNCED, updatedAt = now, serverVersion = it.serverVersion ?: 1)
-                },
-                attachments = job.attachments.map {
-                    it.copy(syncState = SyncState.SYNCED, uploadedAt = it.uploadedAt ?: now)
-                }
-            )
-        }
-        store.lastSuccessfulSyncAtValue = now
     }
 
     private fun findJob(jobId: String): Job? = store.jobsValue.find { it.id == jobId }

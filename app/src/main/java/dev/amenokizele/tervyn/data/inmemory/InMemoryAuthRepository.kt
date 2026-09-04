@@ -32,6 +32,10 @@ class InMemoryAuthRepository @Inject constructor(
         }
     }
 
+    override suspend fun currentAuthenticatedUser(): User? {
+        return (store.authStateValue as? AuthState.Authenticated)?.user
+    }
+
     override suspend fun login(email: String, password: String): AppResult<User> {
         val cleanEmail = email.trim()
         if (cleanEmail.isBlank() || !cleanEmail.contains("@")) {

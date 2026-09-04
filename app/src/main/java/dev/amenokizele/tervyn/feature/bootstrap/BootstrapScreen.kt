@@ -32,19 +32,15 @@ import dev.amenokizele.tervyn.R
 import dev.amenokizele.tervyn.domain.model.ThemeMode
 import dev.amenokizele.tervyn.ui.theme.Spacing
 import dev.amenokizele.tervyn.ui.theme.TervynTheme
-import kotlinx.coroutines.delay
 
 @Composable
 fun BootstrapScreen(
-    onNavigateToLogin: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     var visible by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
         visible = true
-        delay(750)
-        onNavigateToLogin()
     }
 
     Box(
@@ -88,7 +84,7 @@ fun BootstrapScreen(
 @Composable
 private fun BootstrapScreenPreviewLight() {
     TervynTheme(themeMode = ThemeMode.LIGHT) {
-        BootstrapScreen(onNavigateToLogin = {})
+        BootstrapScreen()
     }
 }
 
@@ -96,6 +92,6 @@ private fun BootstrapScreenPreviewLight() {
 @Composable
 private fun BootstrapScreenPreviewDark() {
     TervynTheme(themeMode = ThemeMode.DARK) {
-        BootstrapScreen(onNavigateToLogin = {})
+        BootstrapScreen()
     }
 }

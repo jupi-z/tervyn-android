@@ -127,14 +127,14 @@ class ViewModelArchitectureTest {
         val jobRepository = InMemoryJobRepository(store, clock)
         val authRepository = InMemoryAuthRepository(store, dispatcher)
         val preferencesRepository = InMemoryUserPreferencesRepository(store)
-        val syncRepository = InMemorySyncRepository(store, jobRepository, dispatcher)
+        val syncRepository = InMemorySyncRepository(store, clock, dispatcher)
         val simulationController: SimulationController = DemoSimulationController(store)
 
         fun executionViewModel() = ExecutionViewModel(
             observeJob = ObserveJobUseCase(jobRepository),
             toggleChecklistItemUseCase = ToggleChecklistItemUseCase(jobRepository),
-            addNoteUseCase = AddNoteUseCase(jobRepository),
-            addAttachmentUseCase = AddAttachmentUseCase(jobRepository),
+            addNoteUseCase = AddNoteUseCase(jobRepository, authRepository),
+            addAttachmentUseCase = AddAttachmentUseCase(jobRepository, authRepository),
             deleteAttachmentUseCase = DeleteAttachmentUseCase(jobRepository),
             completeJobUseCase = CompleteJobUseCase(jobRepository)
         )

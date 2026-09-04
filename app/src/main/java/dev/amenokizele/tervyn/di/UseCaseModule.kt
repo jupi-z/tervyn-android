@@ -31,8 +31,17 @@ object UseCaseModule {
     @Provides fun provideObserveJobUseCase(repository: JobRepository) = ObserveJobUseCase(repository)
     @Provides fun provideStartJobUseCase(repository: JobRepository) = StartJobUseCase(repository)
     @Provides fun provideToggleChecklistItemUseCase(repository: JobRepository) = ToggleChecklistItemUseCase(repository)
-    @Provides fun provideAddNoteUseCase(repository: JobRepository) = AddNoteUseCase(repository)
-    @Provides fun provideAddAttachmentUseCase(repository: JobRepository) = AddAttachmentUseCase(repository)
+    @Provides
+    fun provideAddNoteUseCase(
+        repository: JobRepository,
+        authRepository: AuthRepository
+    ) = AddNoteUseCase(repository, authRepository)
+
+    @Provides
+    fun provideAddAttachmentUseCase(
+        repository: JobRepository,
+        authRepository: AuthRepository
+    ) = AddAttachmentUseCase(repository, authRepository)
     @Provides fun provideDeleteAttachmentUseCase(repository: JobRepository) = DeleteAttachmentUseCase(repository)
     @Provides fun provideCompleteJobUseCase(repository: JobRepository) = CompleteJobUseCase(repository)
     @Provides fun provideLoginUseCase(repository: AuthRepository) = LoginUseCase(repository)

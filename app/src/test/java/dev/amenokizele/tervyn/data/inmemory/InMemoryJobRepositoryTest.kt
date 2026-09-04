@@ -56,8 +56,8 @@ class InMemoryJobRepositoryTest {
 
     @Test
     fun completedJob_isReadOnlyForBusinessChanges() = runTest {
-        assertTrue(repository.addNote("job-007", "Nouvelle note") is AppResult.Failure)
-        assertTrue(repository.addAttachment("job-007", photoRequest()) is AppResult.Failure)
+        assertTrue(repository.addNote("job-007", AUTHOR_USER_ID, "Nouvelle note") is AppResult.Failure)
+        assertTrue(repository.addAttachment("job-007", AUTHOR_USER_ID, photoRequest()) is AppResult.Failure)
         assertTrue(repository.deleteAttachment("job-007", "p7-1") is AppResult.Failure)
         assertTrue(repository.toggleChecklistItem("job-007", "c7-1") is AppResult.Failure)
 
@@ -75,8 +75,8 @@ class InMemoryJobRepositoryTest {
         }
         runCurrent()
 
-        assertTrue(repository.addNote("job-003", "Note observable") is AppResult.Success)
-        assertTrue(repository.addAttachment("job-003", photoRequest()) is AppResult.Success)
+        assertTrue(repository.addNote("job-003", AUTHOR_USER_ID, "Note observable") is AppResult.Success)
+        assertTrue(repository.addAttachment("job-003", AUTHOR_USER_ID, photoRequest()) is AppResult.Success)
         assertTrue(repository.toggleChecklistItem("job-003", "c3-3") is AppResult.Success)
         assertTrue(repository.completeJob("job-003") is AppResult.Success)
         runCurrent()
@@ -105,4 +105,8 @@ class InMemoryJobRepositoryTest {
         sizeBytes = 0,
         checksumSha256 = null
     )
+
+    private companion object {
+        const val AUTHOR_USER_ID = "user-test"
+    }
 }
