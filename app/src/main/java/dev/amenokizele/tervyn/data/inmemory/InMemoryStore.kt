@@ -1,11 +1,7 @@
 package dev.amenokizele.tervyn.data.inmemory
 
-import dev.amenokizele.tervyn.data.fixtures.TervynDemoFixtures
 import dev.amenokizele.tervyn.domain.model.AuthState
-import dev.amenokizele.tervyn.domain.model.Job
-import dev.amenokizele.tervyn.domain.model.SyncState
 import dev.amenokizele.tervyn.domain.model.ThemeMode
-import java.time.Instant
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -14,9 +10,6 @@ import javax.inject.Singleton
 
 @Singleton
 class InMemoryStore @Inject constructor() {
-    private val _jobs = MutableStateFlow(TervynDemoFixtures.initialJobs())
-    val jobs: StateFlow<List<Job>> = _jobs.asStateFlow()
-
     private val _authState = MutableStateFlow<AuthState>(AuthState.Checking)
     val authState: StateFlow<AuthState> = _authState.asStateFlow()
 
@@ -25,18 +18,6 @@ class InMemoryStore @Inject constructor() {
 
     private val _isOffline = MutableStateFlow(false)
     val isOffline: StateFlow<Boolean> = _isOffline.asStateFlow()
-
-    private val _isSyncing = MutableStateFlow(false)
-    val isSyncing: StateFlow<Boolean> = _isSyncing.asStateFlow()
-
-    private val _lastSuccessfulSyncAt = MutableStateFlow(TervynDemoFixtures.initialLastSyncAt)
-    val lastSuccessfulSyncAt: StateFlow<Instant> = _lastSuccessfulSyncAt.asStateFlow()
-
-    var jobsValue: List<Job>
-        get() = _jobs.value
-        set(value) {
-            _jobs.value = value
-        }
 
     var authStateValue: AuthState
         get() = _authState.value
@@ -55,44 +36,4 @@ class InMemoryStore @Inject constructor() {
         set(value) {
             _isOffline.value = value
         }
-
-    var isSyncingValue: Boolean
-        get() = _isSyncing.value
-        set(value) {
-            _isSyncing.value = value
-        }
-
-    var lastSuccessfulSyncAtValue: Instant
-        get() = _lastSuccessfulSyncAt.value
-        set(value) {
-            _lastSuccessfulSyncAt.value = value
-        }
-
-    fun pendingCount(): Int = jobsValue.sumOf { job ->
-        val jobCount = if (job.syncState == SyncState.PENDING || job.syncState == SyncState.FAILED) 1 else 0
-        val checklistCount = job.checklist.count { it.syncState == SyncState.PENDING || it.syncState == SyncState.FAILED }
-        val noteCount = job.notes.count { it.syncState == SyncState.PENDING || it.syncState == SyncState.FAILED }
-        val attachmentCount = job.attachments.count { it.syncState == SyncState.PENDING || it.syncState == SyncState.FAILED }
-        jobCount + checklistCount + noteCount + attachmentCount
-    }
-
-    fun markAllPendingSynced(now: Instant) {
-        jobsValue = jobsValue.map { job ->
-            job.copy(
-                syncState = SyncState.SYNCED,
-                updatedAt = now,
-                lastSyncedAt = now,
-                checklist = job.checklist.map {
-                    it.copy(syncState = SyncState.SYNCED, updatedAt = now)
-                },
-                notes = job.notes.map {
-                    it.copy(syncState = SyncState.SYNCED, updatedAt = now, serverVersion = it.serverVersion ?: 1)
-                },
-                attachments = job.attachments.map {
-                    it.copy(syncState = SyncState.SYNCED, uploadedAt = it.uploadedAt ?: now)
-                }
-            )
-        }
-        lastSuccessfulSyncAtValue = now
-    }
 }

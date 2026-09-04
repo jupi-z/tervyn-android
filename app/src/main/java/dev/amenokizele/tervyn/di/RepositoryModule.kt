@@ -1,10 +1,12 @@
 package dev.amenokizele.tervyn.di
 
 import dev.amenokizele.tervyn.app.SimulationController
+import dev.amenokizele.tervyn.app.LocalDataInitializer
+import dev.amenokizele.tervyn.data.local.seed.RoomDatabaseSeeder
+import dev.amenokizele.tervyn.data.local.repository.RoomJobRepository
+import dev.amenokizele.tervyn.data.local.repository.RoomSyncRepository
 import dev.amenokizele.tervyn.data.inmemory.DemoSimulationController
 import dev.amenokizele.tervyn.data.inmemory.InMemoryAuthRepository
-import dev.amenokizele.tervyn.data.inmemory.InMemoryJobRepository
-import dev.amenokizele.tervyn.data.inmemory.InMemorySyncRepository
 import dev.amenokizele.tervyn.data.inmemory.InMemoryUserPreferencesRepository
 import dev.amenokizele.tervyn.domain.repository.AuthRepository
 import dev.amenokizele.tervyn.domain.repository.JobRepository
@@ -21,7 +23,7 @@ import javax.inject.Singleton
 abstract class RepositoryModule {
     @Binds
     @Singleton
-    abstract fun bindJobRepository(repository: InMemoryJobRepository): JobRepository
+    abstract fun bindJobRepository(repository: RoomJobRepository): JobRepository
 
     @Binds
     @Singleton
@@ -29,7 +31,7 @@ abstract class RepositoryModule {
 
     @Binds
     @Singleton
-    abstract fun bindSyncRepository(repository: InMemorySyncRepository): SyncRepository
+    abstract fun bindSyncRepository(repository: RoomSyncRepository): SyncRepository
 
     @Binds
     @Singleton
@@ -38,4 +40,8 @@ abstract class RepositoryModule {
     @Binds
     @Singleton
     abstract fun bindSimulationController(controller: DemoSimulationController): SimulationController
+
+    @Binds
+    @Singleton
+    abstract fun bindLocalDataInitializer(initializer: RoomDatabaseSeeder): LocalDataInitializer
 }

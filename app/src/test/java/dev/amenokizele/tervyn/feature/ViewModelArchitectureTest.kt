@@ -5,9 +5,7 @@ import dev.amenokizele.tervyn.MainDispatcherRule
 import dev.amenokizele.tervyn.app.SimulationController
 import dev.amenokizele.tervyn.data.inmemory.DemoSimulationController
 import dev.amenokizele.tervyn.data.inmemory.InMemoryAuthRepository
-import dev.amenokizele.tervyn.data.inmemory.InMemoryJobRepository
 import dev.amenokizele.tervyn.data.inmemory.InMemoryStore
-import dev.amenokizele.tervyn.data.inmemory.InMemorySyncRepository
 import dev.amenokizele.tervyn.data.inmemory.InMemoryUserPreferencesRepository
 import dev.amenokizele.tervyn.domain.model.JobStatus
 import dev.amenokizele.tervyn.domain.model.ThemeMode
@@ -15,6 +13,8 @@ import dev.amenokizele.tervyn.domain.usecase.AddAttachmentUseCase
 import dev.amenokizele.tervyn.domain.usecase.AddNoteUseCase
 import dev.amenokizele.tervyn.domain.usecase.CompleteJobUseCase
 import dev.amenokizele.tervyn.domain.usecase.DeleteAttachmentUseCase
+import dev.amenokizele.tervyn.domain.usecase.LogoutUseCase
+import dev.amenokizele.tervyn.domain.usecase.ObserveAuthStateUseCase
 import dev.amenokizele.tervyn.domain.usecase.LoginUseCase
 import dev.amenokizele.tervyn.domain.usecase.ObserveJobUseCase
 import dev.amenokizele.tervyn.domain.usecase.ObserveJobsUseCase
@@ -23,11 +23,16 @@ import dev.amenokizele.tervyn.domain.usecase.ObserveThemeModeUseCase
 import dev.amenokizele.tervyn.domain.usecase.RetryPendingOperationsUseCase
 import dev.amenokizele.tervyn.domain.usecase.SetThemeModeUseCase
 import dev.amenokizele.tervyn.domain.usecase.ToggleChecklistItemUseCase
+import dev.amenokizele.tervyn.app.TervynAppViewModel
+import dev.amenokizele.tervyn.domain.model.AuthState
 import dev.amenokizele.tervyn.feature.auth.LoginUiState
 import dev.amenokizele.tervyn.feature.auth.LoginViewModel
 import dev.amenokizele.tervyn.feature.execution.ExecutionViewModel
 import dev.amenokizele.tervyn.feature.jobs.JobsViewModel
 import dev.amenokizele.tervyn.feature.settings.SettingsViewModel
+import dev.amenokizele.tervyn.fake.FakeJobRepository
+import dev.amenokizele.tervyn.fake.FakeLocalDataInitializer
+import dev.amenokizele.tervyn.fake.FakeSyncRepository
 import dev.amenokizele.tervyn.model.JobFilter
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.launch
@@ -121,13 +126,35 @@ class ViewModelArchitectureTest {
         assertEquals(ThemeMode.DARK, viewModel.currentTheme.value)
     }
 
+    @Test
+    fun appViewModelKeepsBootstrapStateUntilLocalDataInitialized() = runTest(mainDispatcherRule.dispatcher) {
+        val graph = TestGraph(StandardTestDispatcher(testScheduler))
+        val initializer = FakeLocalDataInitializer()
+        val viewModel = TervynAppViewModel(
+            observeAuthState = ObserveAuthStateUseCase(graph.authRepository),
+            observeThemeMode = ObserveThemeModeUseCase(graph.preferencesRepository),
+            observeSyncOverview = ObserveSyncOverviewUseCase(graph.syncRepository),
+            localDataInitializer = initializer,
+            logoutUseCase = LogoutUseCase(graph.authRepository)
+        )
+        graph.store.authStateValue = AuthState.Unauthenticated
+        advanceUntilIdle()
+
+        assertEquals(AuthState.Checking, viewModel.state.value.authState)
+
+        initializer.complete()
+        advanceUntilIdle()
+
+        assertEquals(AuthState.Unauthenticated, viewModel.state.value.authState)
+    }
+
     private class TestGraph(dispatcher: kotlinx.coroutines.CoroutineDispatcher) {
         val store = InMemoryStore()
         val clock = FakeTervynClock()
-        val jobRepository = InMemoryJobRepository(store, clock)
+        val jobRepository = FakeJobRepository(clock)
         val authRepository = InMemoryAuthRepository(store, dispatcher)
         val preferencesRepository = InMemoryUserPreferencesRepository(store)
-        val syncRepository = InMemorySyncRepository(store, clock, dispatcher)
+        val syncRepository = FakeSyncRepository()
         val simulationController: SimulationController = DemoSimulationController(store)
 
         fun executionViewModel() = ExecutionViewModel(

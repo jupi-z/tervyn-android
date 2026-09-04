@@ -3,13 +3,12 @@ package dev.amenokizele.tervyn.domain.usecase
 import dev.amenokizele.tervyn.FakeTervynClock
 import dev.amenokizele.tervyn.core.result.AppError
 import dev.amenokizele.tervyn.core.result.AppResult
-import dev.amenokizele.tervyn.data.inmemory.InMemoryJobRepository
-import dev.amenokizele.tervyn.data.inmemory.InMemoryStore
 import dev.amenokizele.tervyn.domain.model.AddAttachmentRequest
 import dev.amenokizele.tervyn.domain.model.AttachmentType
 import dev.amenokizele.tervyn.domain.model.AuthState
 import dev.amenokizele.tervyn.domain.model.User
 import dev.amenokizele.tervyn.domain.repository.AuthRepository
+import dev.amenokizele.tervyn.fake.FakeJobRepository
 import java.time.Instant
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
@@ -21,7 +20,7 @@ import org.junit.Test
 class AuthorUseCaseTest {
     @Test
     fun addNote_usesAuthenticatedUserIdAsAuthor() = runTest {
-        val repository = InMemoryJobRepository(InMemoryStore(), FakeTervynClock())
+        val repository = FakeJobRepository(FakeTervynClock())
         val useCase = AddNoteUseCase(repository, authRepository(user("user-X")))
 
         val result = useCase("job-003", "Note avec auteur courant")
@@ -32,7 +31,7 @@ class AuthorUseCaseTest {
 
     @Test
     fun addAttachment_usesAuthenticatedUserIdAsAuthor() = runTest {
-        val repository = InMemoryJobRepository(InMemoryStore(), FakeTervynClock())
+        val repository = FakeJobRepository(FakeTervynClock())
         val useCase = AddAttachmentUseCase(repository, authRepository(user("user-Y")))
 
         val result = useCase("job-003", photoRequest())
@@ -43,7 +42,7 @@ class AuthorUseCaseTest {
 
     @Test
     fun addNote_withoutAuthenticatedUserFails() = runTest {
-        val repository = InMemoryJobRepository(InMemoryStore(), FakeTervynClock())
+        val repository = FakeJobRepository(FakeTervynClock())
         val useCase = AddNoteUseCase(repository, authRepository(null))
 
         val result = useCase("job-003", "Note refusée")
@@ -54,7 +53,7 @@ class AuthorUseCaseTest {
 
     @Test
     fun addAttachment_withoutAuthenticatedUserFails() = runTest {
-        val repository = InMemoryJobRepository(InMemoryStore(), FakeTervynClock())
+        val repository = FakeJobRepository(FakeTervynClock())
         val useCase = AddAttachmentUseCase(repository, authRepository(null))
 
         val result = useCase("job-003", photoRequest())

@@ -11,6 +11,7 @@ import dev.amenokizele.tervyn.domain.usecase.ObserveAuthStateUseCase
 import dev.amenokizele.tervyn.domain.usecase.ObserveSyncOverviewUseCase
 import dev.amenokizele.tervyn.domain.usecase.ObserveThemeModeUseCase
 import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -21,15 +22,19 @@ class TervynAppViewModel @Inject constructor(
     observeAuthState: ObserveAuthStateUseCase,
     observeThemeMode: ObserveThemeModeUseCase,
     observeSyncOverview: ObserveSyncOverviewUseCase,
+    private val localDataInitializer: LocalDataInitializer,
     private val logoutUseCase: LogoutUseCase
 ) : ViewModel() {
+    private val localDataReady = MutableStateFlow(false)
+
     val state = combine(
         observeAuthState(),
         observeThemeMode(),
-        observeSyncOverview()
-    ) { authState, themeMode, syncOverview ->
+        observeSyncOverview(),
+        localDataReady
+    ) { authState, themeMode, syncOverview, isLocalDataReady ->
         TervynAppState(
-            authState = authState,
+            authState = if (isLocalDataReady) authState else AuthState.Checking,
             themeMode = themeMode,
             pendingSyncCount = syncOverview.pendingCount
         )
@@ -42,6 +47,14 @@ class TervynAppViewModel @Inject constructor(
             pendingSyncCount = 0
         )
     )
+
+    init {
+        viewModelScope.launch {
+            if (localDataInitializer.initialize() is AppResult.Success) {
+                localDataReady.value = true
+            }
+        }
+    }
 
     fun logout(onLoggedOut: () -> Unit = {}) {
         viewModelScope.launch {
