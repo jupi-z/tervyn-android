@@ -27,6 +27,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.navigation
 import androidx.navigation.navArgument
 import dev.amenokizele.tervyn.R
+import dev.amenokizele.tervyn.app.LocalDataInitializationState
 import dev.amenokizele.tervyn.app.TervynAppState
 import dev.amenokizele.tervyn.domain.model.AuthState
 import dev.amenokizele.tervyn.feature.auth.LoginScreen
@@ -49,6 +50,7 @@ import kotlinx.coroutines.launch
 fun TervynNavGraph(
     navController: NavHostController,
     appState: TervynAppState,
+    onRetryLocalData: () -> Unit,
     onLogoutConfirmed: (() -> Unit) -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -71,7 +73,10 @@ fun TervynNavGraph(
     val jobCompletedMessage = stringResource(R.string.message_job_completed)
     val loggedOutMessage = stringResource(R.string.message_logged_out)
 
-    LaunchedEffect(appState.authState) {
+    LaunchedEffect(appState.localDataState, appState.authState) {
+        if (appState.localDataState != LocalDataInitializationState.Ready) {
+            return@LaunchedEffect
+        }
         when (appState.authState) {
             AuthState.Checking -> Unit
             is AuthState.Authenticated -> {
@@ -132,7 +137,10 @@ fun TervynNavGraph(
             popExitTransition = { fadeOut(animationSpec = tween(200)) }
         ) {
             composable(TervynDestination.Bootstrap.route) {
-                BootstrapScreen()
+                BootstrapScreen(
+                    initializationState = appState.localDataState,
+                    onRetry = onRetryLocalData
+                )
             }
 
             navigation(

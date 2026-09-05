@@ -51,7 +51,9 @@ The Domain layer remains pure Kotlin and independent from Android UI, Compose, H
 
 ## Startup Initialization
 
-`RoomDatabaseSeeder` implements `LocalDataInitializer`. `TervynAppViewModel` keeps the app in `AuthState.Checking` so Bootstrap remains visible until Room opens and the one-time seed completes.
+`RoomDatabaseSeeder` implements `LocalDataInitializer`. `TervynAppViewModel` exposes `LocalDataInitializationState` with `Initializing`, `Ready`, and `Error` states so Bootstrap remains the only visible surface until Room opens and the one-time seed completes.
+
+Authentication and application navigation are activated only after local data reaches `Ready`. If initialization fails, Bootstrap shows a concise local-data error and a user-triggered retry action. Retry requests are ignored while an initialization attempt is already running.
 
 ## Explicit Non-Goals
 

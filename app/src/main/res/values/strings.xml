@@ -28,6 +28,9 @@
     <string name="title_job_not_found">Intervention introuvable</string>
     <string name="login_tagline">Field operations,\nwherever work happens.</string>
     <string name="bootstrap_tagline">Field operations</string>
+    <string name="bootstrap_initializing">Initialisation des données locales...</string>
+    <string name="bootstrap_error_title">Impossible d\'initialiser les données locales.</string>
+    <string name="bootstrap_error_body">Vérifiez l\'espace disponible puis réessayez.</string>
     <string name="login_email_label">Email</string>
     <string name="login_demo_email">amina@tervyn.demo</string>
     <string name="login_password_label">Mot de passe</string>

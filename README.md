@@ -31,6 +31,7 @@ The current app keeps the validated Compose front-end and architecture boundarie
 - Transactional local mutations that write business data and outbox rows atomically.
 - Domain to Entity mapping and Entity to Domain mapping.
 - One-time local demo seed guarded by a persistent metadata marker.
+- Startup initialization error handling with an explicit retry path.
 - Simulated login, theme preference, and offline toggle for the existing prototype flow.
 - Existing UI flow: Bootstrap, Login, Interventions, Detail, Execution, Notes, Photos, Completion, Sync, Settings, Logout.
 

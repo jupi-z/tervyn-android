@@ -2,29 +2,31 @@ package dev.amenokizele.tervyn.feature
 
 import dev.amenokizele.tervyn.FakeTervynClock
 import dev.amenokizele.tervyn.MainDispatcherRule
+import dev.amenokizele.tervyn.app.LocalDataInitializationState
 import dev.amenokizele.tervyn.app.SimulationController
+import dev.amenokizele.tervyn.app.TervynAppViewModel
+import dev.amenokizele.tervyn.core.result.AppError
+import dev.amenokizele.tervyn.core.result.AppResult
 import dev.amenokizele.tervyn.data.inmemory.DemoSimulationController
 import dev.amenokizele.tervyn.data.inmemory.InMemoryAuthRepository
 import dev.amenokizele.tervyn.data.inmemory.InMemoryStore
 import dev.amenokizele.tervyn.data.inmemory.InMemoryUserPreferencesRepository
+import dev.amenokizele.tervyn.domain.model.AuthState
 import dev.amenokizele.tervyn.domain.model.JobStatus
 import dev.amenokizele.tervyn.domain.model.ThemeMode
 import dev.amenokizele.tervyn.domain.usecase.AddAttachmentUseCase
 import dev.amenokizele.tervyn.domain.usecase.AddNoteUseCase
 import dev.amenokizele.tervyn.domain.usecase.CompleteJobUseCase
 import dev.amenokizele.tervyn.domain.usecase.DeleteAttachmentUseCase
+import dev.amenokizele.tervyn.domain.usecase.LoginUseCase
 import dev.amenokizele.tervyn.domain.usecase.LogoutUseCase
 import dev.amenokizele.tervyn.domain.usecase.ObserveAuthStateUseCase
-import dev.amenokizele.tervyn.domain.usecase.LoginUseCase
 import dev.amenokizele.tervyn.domain.usecase.ObserveJobUseCase
 import dev.amenokizele.tervyn.domain.usecase.ObserveJobsUseCase
 import dev.amenokizele.tervyn.domain.usecase.ObserveSyncOverviewUseCase
 import dev.amenokizele.tervyn.domain.usecase.ObserveThemeModeUseCase
-import dev.amenokizele.tervyn.domain.usecase.RetryPendingOperationsUseCase
 import dev.amenokizele.tervyn.domain.usecase.SetThemeModeUseCase
 import dev.amenokizele.tervyn.domain.usecase.ToggleChecklistItemUseCase
-import dev.amenokizele.tervyn.app.TervynAppViewModel
-import dev.amenokizele.tervyn.domain.model.AuthState
 import dev.amenokizele.tervyn.feature.auth.LoginUiState
 import dev.amenokizele.tervyn.feature.auth.LoginViewModel
 import dev.amenokizele.tervyn.feature.execution.ExecutionViewModel
@@ -127,7 +129,7 @@ class ViewModelArchitectureTest {
     }
 
     @Test
-    fun appViewModelKeepsBootstrapStateUntilLocalDataInitialized() = runTest(mainDispatcherRule.dispatcher) {
+    fun appViewModelExposesReadyAfterSuccessfulLocalDataInitialization() = runTest(mainDispatcherRule.dispatcher) {
         val graph = TestGraph(StandardTestDispatcher(testScheduler))
         val initializer = FakeLocalDataInitializer()
         val viewModel = TervynAppViewModel(
@@ -140,12 +142,85 @@ class ViewModelArchitectureTest {
         graph.store.authStateValue = AuthState.Unauthenticated
         advanceUntilIdle()
 
+        assertEquals(LocalDataInitializationState.Initializing, viewModel.state.value.localDataState)
         assertEquals(AuthState.Checking, viewModel.state.value.authState)
 
         initializer.complete()
         advanceUntilIdle()
 
+        assertEquals(LocalDataInitializationState.Ready, viewModel.state.value.localDataState)
         assertEquals(AuthState.Unauthenticated, viewModel.state.value.authState)
+    }
+
+    @Test
+    fun appViewModelExposesLocalDataErrorAndKeepsAuthNavigationGated() = runTest(mainDispatcherRule.dispatcher) {
+        val graph = TestGraph(StandardTestDispatcher(testScheduler))
+        val storageError = AppError.Storage("local_database_error")
+        val initializer = FakeLocalDataInitializer(AppResult.Failure(storageError)).apply {
+            completeImmediately()
+        }
+        val viewModel = TervynAppViewModel(
+            observeAuthState = ObserveAuthStateUseCase(graph.authRepository),
+            observeThemeMode = ObserveThemeModeUseCase(graph.preferencesRepository),
+            observeSyncOverview = ObserveSyncOverviewUseCase(graph.syncRepository),
+            localDataInitializer = initializer,
+            logoutUseCase = LogoutUseCase(graph.authRepository)
+        )
+        graph.store.authStateValue = AuthState.Unauthenticated
+        advanceUntilIdle()
+
+        assertEquals(LocalDataInitializationState.Error(storageError), viewModel.state.value.localDataState)
+        assertEquals(AuthState.Checking, viewModel.state.value.authState)
+    }
+
+    @Test
+    fun appViewModelRetryMovesFromLocalDataFailureToReady() = runTest(mainDispatcherRule.dispatcher) {
+        val graph = TestGraph(StandardTestDispatcher(testScheduler))
+        val initializer = FakeLocalDataInitializer(AppResult.Failure(AppError.Storage("seed_failed"))).apply {
+            enqueueResult(AppResult.Success(Unit))
+            completeImmediately()
+        }
+        val viewModel = TervynAppViewModel(
+            observeAuthState = ObserveAuthStateUseCase(graph.authRepository),
+            observeThemeMode = ObserveThemeModeUseCase(graph.preferencesRepository),
+            observeSyncOverview = ObserveSyncOverviewUseCase(graph.syncRepository),
+            localDataInitializer = initializer,
+            logoutUseCase = LogoutUseCase(graph.authRepository)
+        )
+        graph.store.authStateValue = AuthState.Unauthenticated
+        advanceUntilIdle()
+
+        assertTrue(viewModel.state.value.localDataState is LocalDataInitializationState.Error)
+
+        viewModel.retryLocalDataInitialization()
+        advanceUntilIdle()
+
+        assertEquals(LocalDataInitializationState.Ready, viewModel.state.value.localDataState)
+        assertEquals(AuthState.Unauthenticated, viewModel.state.value.authState)
+        assertEquals(2, initializer.invocationCount)
+    }
+
+    @Test
+    fun appViewModelIgnoresRetryWhileLocalDataInitializationIsRunning() = runTest(mainDispatcherRule.dispatcher) {
+        val graph = TestGraph(StandardTestDispatcher(testScheduler))
+        val initializer = FakeLocalDataInitializer()
+        val viewModel = TervynAppViewModel(
+            observeAuthState = ObserveAuthStateUseCase(graph.authRepository),
+            observeThemeMode = ObserveThemeModeUseCase(graph.preferencesRepository),
+            observeSyncOverview = ObserveSyncOverviewUseCase(graph.syncRepository),
+            localDataInitializer = initializer,
+            logoutUseCase = LogoutUseCase(graph.authRepository)
+        )
+        runCurrent()
+
+        viewModel.retryLocalDataInitialization()
+        runCurrent()
+
+        assertEquals(1, initializer.invocationCount)
+
+        initializer.complete()
+        advanceUntilIdle()
+        assertEquals(LocalDataInitializationState.Ready, viewModel.state.value.localDataState)
     }
 
     private class TestGraph(dispatcher: kotlinx.coroutines.CoroutineDispatcher) {

@@ -25,7 +25,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -122,6 +122,33 @@ class RoomJobRepositoryTest {
 
         assertEquals(0, database.syncOperationDao().observeAllOrdered().first().size)
         assertEquals(JobStatus.COMPLETED, repository.observeJob("job-1").first()?.status)
+    }
+
+    @Test
+    fun completeJobRejectsAssignedJobWithoutOutboxMutation() = runBlocking {
+        database.jobDao().insertJob(job(status = JobStatus.ASSIGNED))
+        database.checklistItemDao().upsert(checklist(completed = true))
+
+        val result = repository.completeJob("job-1")
+
+        assertTrue(result is AppResult.Failure)
+        assertTrue((result as AppResult.Failure).error is AppError.InvalidState)
+        assertEquals(JobStatus.ASSIGNED, repository.observeJob("job-1").first()?.status)
+        assertEquals(0, database.syncOperationDao().observeAllOrdered().first().size)
+    }
+
+    @Test
+    fun completeJobRejectsIncompleteRequiredChecklistWithoutOutboxMutation() = runBlocking {
+        database.jobDao().insertJob(job(status = JobStatus.IN_PROGRESS))
+        database.checklistItemDao().upsert(checklist(completed = false))
+
+        val result = repository.completeJob("job-1")
+
+        assertTrue(result is AppResult.Failure)
+        assertTrue((result as AppResult.Failure).error is AppError.InvalidState)
+        assertEquals(JobStatus.IN_PROGRESS, repository.observeJob("job-1").first()?.status)
+        assertNull(database.jobDao().getJobById("job-1")?.completedAt)
+        assertEquals(0, database.syncOperationDao().observeAllOrdered().first().size)
     }
 
     @Test

@@ -24,6 +24,7 @@ class MainActivity : ComponentActivity() {
             TervynTheme(themeMode = appState.themeMode) {
                 TervynApp(
                     state = appState,
+                    onRetryLocalData = appViewModel::retryLocalDataInitialization,
                     onLogoutConfirmed = appViewModel::logout
                 )
             }
