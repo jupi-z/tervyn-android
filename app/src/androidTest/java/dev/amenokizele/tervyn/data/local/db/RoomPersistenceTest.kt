@@ -22,28 +22,30 @@ import org.junit.Test
 
 class RoomPersistenceTest {
     @Test
-    fun fileDatabasePersistsJobNoteAttachmentAndOutboxAcrossReopen() = runBlocking {
-        val context = ApplicationProvider.getApplicationContext<Context>()
-        val dbName = "tervyn-persistence-test.db"
-        context.deleteDatabase(dbName)
+    fun fileDatabasePersistsJobNoteAttachmentAndOutboxAcrossReopen() {
+        runBlocking {
+            val context = ApplicationProvider.getApplicationContext<Context>()
+            val dbName = "tervyn-persistence-test.db"
+            context.deleteDatabase(dbName)
 
-        var database = openDatabase(context, dbName)
-        database.jobDao().upsertJob(job(status = JobStatus.IN_PROGRESS))
-        database.noteDao().upsert(note())
-        database.attachmentDao().upsert(attachment())
-        database.syncOperationDao().insert(operation())
-        database.close()
+            var database = openDatabase(context, dbName)
+            database.jobDao().insertJob(job(status = JobStatus.IN_PROGRESS))
+            database.noteDao().upsert(note())
+            database.attachmentDao().upsert(attachment())
+            database.syncOperationDao().insert(operation())
+            database.close()
 
-        database = openDatabase(context, dbName)
-        val reopenedJob = requireNotNull(database.jobDao().getJobWithDetails("job-1"))
+            database = openDatabase(context, dbName)
+            val reopenedJob = requireNotNull(database.jobDao().getJobWithDetails("job-1"))
 
-        assertEquals(JobStatus.IN_PROGRESS, reopenedJob.job.status)
-        assertEquals(listOf("note-1"), reopenedJob.notes.map { it.id })
-        assertEquals(listOf("attachment-1"), reopenedJob.attachments.map { it.id })
-        assertEquals(1, database.syncOperationDao().observePendingCount().first())
+            assertEquals(JobStatus.IN_PROGRESS, reopenedJob.job.status)
+            assertEquals(listOf("note-1"), reopenedJob.notes.map { it.id })
+            assertEquals(listOf("attachment-1"), reopenedJob.attachments.map { it.id })
+            assertEquals(1, database.syncOperationDao().observePendingCount().first())
 
-        database.close()
-        context.deleteDatabase(dbName)
+            database.close()
+            context.deleteDatabase(dbName)
+        }
     }
 
     private fun openDatabase(context: Context, dbName: String): TervynDatabase {

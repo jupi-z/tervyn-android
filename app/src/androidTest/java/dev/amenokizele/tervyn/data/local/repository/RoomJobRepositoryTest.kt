@@ -51,7 +51,7 @@ class RoomJobRepositoryTest {
 
     @Test
     fun startJob_changesAssignedJobAndWritesJobUpdateOutbox() = runBlocking {
-        database.jobDao().upsertJob(job(status = JobStatus.ASSIGNED))
+        database.jobDao().insertJob(job(status = JobStatus.ASSIGNED))
         ids.enqueue("op-start", "mutation-start")
 
         val result = repository.startJob("job-1")
@@ -67,7 +67,7 @@ class RoomJobRepositoryTest {
 
     @Test
     fun fieldMutationsPersistDataAndOutboxOperations() = runBlocking {
-        database.jobDao().upsertJob(job(status = JobStatus.IN_PROGRESS))
+        database.jobDao().insertJob(job(status = JobStatus.IN_PROGRESS))
         database.checklistItemDao().upsert(checklist(completed = false))
         database.attachmentDao().upsert(attachment(id = "attachment-existing"))
         ids.enqueue(
@@ -109,7 +109,7 @@ class RoomJobRepositoryTest {
 
     @Test
     fun completedJobRejectsEveryBusinessMutation() = runBlocking {
-        database.jobDao().upsertJob(job(status = JobStatus.COMPLETED))
+        database.jobDao().insertJob(job(status = JobStatus.COMPLETED))
         database.checklistItemDao().upsert(checklist(completed = true))
         database.attachmentDao().upsert(attachment(id = "attachment-existing"))
 
@@ -126,7 +126,7 @@ class RoomJobRepositoryTest {
 
     @Test
     fun addNoteRejectsUnknownAuthorWithoutCreatingGhostUser() = runBlocking {
-        database.jobDao().upsertJob(job(status = JobStatus.IN_PROGRESS))
+        database.jobDao().insertJob(job(status = JobStatus.IN_PROGRESS))
 
         val result = repository.addNote("job-1", "missing-user", "Note")
 
@@ -137,7 +137,7 @@ class RoomJobRepositoryTest {
 
     @Test
     fun outboxFailureRollsBackBusinessMutation() = runBlocking {
-        database.jobDao().upsertJob(job(status = JobStatus.ASSIGNED))
+        database.jobDao().insertJob(job(status = JobStatus.ASSIGNED))
         database.syncOperationDao().insert(operation(id = "existing-op", clientMutationId = "duplicate-mutation"))
         ids.enqueue("new-op", "duplicate-mutation")
 

@@ -35,7 +35,7 @@ class RoomDatabaseSeeder @Inject constructor(
 
                 val jobs = TervynDemoFixtures.initialJobs().map { it.asSeededSynced() }
                 database.userDao().upsert(TervynDemoFixtures.currentUser.toEntity())
-                database.jobDao().upsertJobs(jobs.map { it.toEntity() })
+                database.jobDao().insertJobs(jobs.map { it.toEntity() })
                 database.checklistItemDao().upsertAll(jobs.flatMap { job -> job.checklist.map { it.toEntity() } })
                 database.noteDao().upsertAll(jobs.flatMap { job -> job.notes.map { it.toEntity() } })
                 database.attachmentDao().upsertAll(jobs.flatMap { job -> job.attachments.map { it.toEntity() } })

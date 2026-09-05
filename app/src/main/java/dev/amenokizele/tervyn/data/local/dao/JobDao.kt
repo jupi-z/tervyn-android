@@ -27,11 +27,11 @@ interface JobDao {
     @Query("SELECT * FROM jobs WHERE id = :jobId")
     suspend fun getJobById(jobId: String): JobEntity?
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun upsertJob(job: JobEntity)
+    @Insert(onConflict = OnConflictStrategy.ABORT)
+    suspend fun insertJob(job: JobEntity)
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun upsertJobs(jobs: List<JobEntity>)
+    @Insert(onConflict = OnConflictStrategy.ABORT)
+    suspend fun insertJobs(jobs: List<JobEntity>)
 
     @Update
     suspend fun updateJob(job: JobEntity)

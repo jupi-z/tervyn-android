@@ -12,6 +12,7 @@ import dev.amenokizele.tervyn.data.local.entity.SyncEntityType
 import dev.amenokizele.tervyn.data.local.entity.SyncOperationEntity
 import dev.amenokizele.tervyn.data.local.entity.SyncOperationStatus
 import dev.amenokizele.tervyn.data.local.entity.SyncOperationType
+import dev.amenokizele.tervyn.data.local.mapper.toDomain
 import dev.amenokizele.tervyn.domain.model.AttachmentType
 import dev.amenokizele.tervyn.domain.model.JobPriority
 import dev.amenokizele.tervyn.domain.model.JobStatus
@@ -22,7 +23,6 @@ import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
-import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 
@@ -43,7 +43,7 @@ class RoomDaoTest {
 
     @Test
     fun jobRelations_readChecklistNotesAndVisibleAttachmentsInDeterministicOrder() = runBlocking {
-        database.jobDao().upsertJob(job())
+        database.jobDao().insertJob(job())
         database.checklistItemDao().upsertAll(
             listOf(checklist("c-2", 2), checklist("c-1", 1))
         )
@@ -68,14 +68,15 @@ class RoomDaoTest {
         val relation = database.jobDao().observeJobWithDetails("job-1").first()
 
         requireNotNull(relation)
-        assertEquals(listOf("c-1", "c-2"), relation.checklist.map { it.id })
-        assertEquals(listOf("n-1", "n-2"), relation.notes.map { it.id })
-        assertEquals(listOf("a-1", "a-2"), relation.attachments.map { it.id })
+        val job = relation.toDomain()
+        assertEquals(listOf("c-1", "c-2"), job.checklist.map { it.id })
+        assertEquals(listOf("n-1", "n-2"), job.notes.map { it.id })
+        assertEquals(listOf("a-1", "a-2"), job.attachments.map { it.id })
     }
 
     @Test
     fun jobForeignKeyCascade_removesChildrenWhenJobIsDeleted() = runBlocking {
-        database.jobDao().upsertJob(job())
+        database.jobDao().insertJob(job())
         database.checklistItemDao().upsert(checklist("c-1", 1))
         database.noteDao().upsert(note("n-1"))
         database.attachmentDao().upsert(attachment("a-1"))
@@ -89,9 +90,9 @@ class RoomDaoTest {
 
     @Test
     fun uniqueIndexes_rejectDuplicateJobReferenceAndClientMutationId() = runBlocking {
-        database.jobDao().upsertJob(job(id = "job-1", reference = "JOB-1"))
+        database.jobDao().insertJob(job(id = "job-1", reference = "JOB-1"))
         try {
-            database.jobDao().upsertJob(job(id = "job-2", reference = "JOB-1"))
+            database.jobDao().insertJob(job(id = "job-2", reference = "JOB-1"))
         } catch (_: android.database.sqlite.SQLiteConstraintException) {
             // Expected unique reference violation.
         }
@@ -130,8 +131,8 @@ class RoomDaoTest {
     }
 
     @Test
-    fun databaseCanBeCreatedForInitialSchemaWithoutMigrations() {
-        assertTrue(database.isOpen)
+    fun databaseCanBeCreatedForInitialSchemaWithoutMigrations() = runBlocking {
+        assertEquals(0, database.jobDao().countJobs())
     }
 
     private fun job(

@@ -9,6 +9,7 @@ kotlin = "2.2.10"
 composeBom = "2024.09.00"
 navigationCompose = "2.8.9"
 kotlinxCoroutines = "1.10.2"
+kotlinxSerialization = "1.8.1"
 junit = "4.13.2"
 hilt = "2.60.1"
 androidxHiltNavigationCompose = "1.2.0"
@@ -38,6 +39,7 @@ androidx-compose-material-icons-extended = { group = "androidx.compose.material"
 kotlinx-coroutines-android = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-android", version.ref = "kotlinxCoroutines" }
 kotlinx-coroutines-core = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-core", version.ref = "kotlinxCoroutines" }
 kotlinx-coroutines-test = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-test", version.ref = "kotlinxCoroutines" }
+kotlinx-serialization-json = { group = "org.jetbrains.kotlinx", name = "kotlinx-serialization-json", version.ref = "kotlinxSerialization" }
 junit = { group = "junit", name = "junit", version.ref = "junit" }
 hilt-android = { group = "com.google.dagger", name = "hilt-android", version.ref = "hilt" }
 hilt-compiler = { group = "com.google.dagger", name = "hilt-compiler", version.ref = "hilt" }
