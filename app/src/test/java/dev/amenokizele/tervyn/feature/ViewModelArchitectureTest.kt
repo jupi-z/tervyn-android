@@ -7,13 +7,15 @@ import dev.amenokizele.tervyn.app.SimulationController
 import dev.amenokizele.tervyn.app.TervynAppViewModel
 import dev.amenokizele.tervyn.core.result.AppError
 import dev.amenokizele.tervyn.core.result.AppResult
+import dev.amenokizele.tervyn.data.fixtures.TervynDemoFixtures
 import dev.amenokizele.tervyn.data.inmemory.DemoSimulationController
-import dev.amenokizele.tervyn.data.inmemory.InMemoryAuthRepository
 import dev.amenokizele.tervyn.data.inmemory.InMemoryStore
-import dev.amenokizele.tervyn.data.inmemory.InMemoryUserPreferencesRepository
 import dev.amenokizele.tervyn.domain.model.AuthState
 import dev.amenokizele.tervyn.domain.model.JobStatus
 import dev.amenokizele.tervyn.domain.model.ThemeMode
+import dev.amenokizele.tervyn.domain.model.User
+import dev.amenokizele.tervyn.domain.repository.AuthRepository
+import dev.amenokizele.tervyn.domain.repository.UserPreferencesRepository
 import dev.amenokizele.tervyn.domain.usecase.AddAttachmentUseCase
 import dev.amenokizele.tervyn.domain.usecase.AddNoteUseCase
 import dev.amenokizele.tervyn.domain.usecase.CompleteJobUseCase
@@ -37,6 +39,8 @@ import dev.amenokizele.tervyn.fake.FakeLocalDataInitializer
 import dev.amenokizele.tervyn.fake.FakeSyncRepository
 import dev.amenokizele.tervyn.model.JobFilter
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
@@ -139,7 +143,7 @@ class ViewModelArchitectureTest {
             localDataInitializer = initializer,
             logoutUseCase = LogoutUseCase(graph.authRepository)
         )
-        graph.store.authStateValue = AuthState.Unauthenticated
+        graph.authRepository.authStateValue = AuthState.Unauthenticated
         advanceUntilIdle()
 
         assertEquals(LocalDataInitializationState.Initializing, viewModel.state.value.localDataState)
@@ -166,7 +170,7 @@ class ViewModelArchitectureTest {
             localDataInitializer = initializer,
             logoutUseCase = LogoutUseCase(graph.authRepository)
         )
-        graph.store.authStateValue = AuthState.Unauthenticated
+        graph.authRepository.authStateValue = AuthState.Unauthenticated
         advanceUntilIdle()
 
         assertEquals(LocalDataInitializationState.Error(storageError), viewModel.state.value.localDataState)
@@ -187,7 +191,7 @@ class ViewModelArchitectureTest {
             localDataInitializer = initializer,
             logoutUseCase = LogoutUseCase(graph.authRepository)
         )
-        graph.store.authStateValue = AuthState.Unauthenticated
+        graph.authRepository.authStateValue = AuthState.Unauthenticated
         advanceUntilIdle()
 
         assertTrue(viewModel.state.value.localDataState is LocalDataInitializationState.Error)
@@ -227,8 +231,8 @@ class ViewModelArchitectureTest {
         val store = InMemoryStore()
         val clock = FakeTervynClock()
         val jobRepository = FakeJobRepository(clock)
-        val authRepository = InMemoryAuthRepository(store, dispatcher)
-        val preferencesRepository = InMemoryUserPreferencesRepository(store)
+        val authRepository = FakeAuthRepository()
+        val preferencesRepository = FakePreferencesRepository()
         val syncRepository = FakeSyncRepository()
         val simulationController: SimulationController = DemoSimulationController(store)
 
@@ -240,5 +244,43 @@ class ViewModelArchitectureTest {
             deleteAttachmentUseCase = DeleteAttachmentUseCase(jobRepository),
             completeJobUseCase = CompleteJobUseCase(jobRepository)
         )
+    }
+
+    private class FakeAuthRepository : AuthRepository {
+        private val state = MutableStateFlow<AuthState>(AuthState.Checking)
+        override val authState: Flow<AuthState> = state
+
+        var authStateValue: AuthState
+            get() = state.value
+            set(value) {
+                state.value = value
+            }
+
+        override suspend fun currentAuthenticatedUser(): User? {
+            return (state.value as? AuthState.Authenticated)?.user
+        }
+
+        override suspend fun login(email: String, password: String): AppResult<User> {
+            if (!email.contains("@")) {
+                return AppResult.Failure(AppError.Validation("invalid_email"))
+            }
+            val user = TervynDemoFixtures.currentUser
+            state.value = AuthState.Authenticated(user)
+            return AppResult.Success(user)
+        }
+
+        override suspend fun logout(): AppResult<Unit> {
+            state.value = AuthState.Unauthenticated
+            return AppResult.Success(Unit)
+        }
+    }
+
+    private class FakePreferencesRepository : UserPreferencesRepository {
+        private val state = MutableStateFlow(ThemeMode.SYSTEM)
+        override val themeMode: Flow<ThemeMode> = state
+
+        override suspend fun setThemeMode(mode: ThemeMode) {
+            state.value = mode
+        }
     }
 }

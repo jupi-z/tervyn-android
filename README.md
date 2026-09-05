@@ -4,9 +4,9 @@ Offline-first field operations for Android.
 
 ## Status
 
-Local offline data foundation / Room-backed Android app.
+Secure session foundation / Room-backed Android app.
 
-The current app keeps the validated Compose front-end and architecture boundaries while replacing field-data storage with Room local persistence. Remote authentication, APIs, background sync, upload, and conflict resolution are intentionally not implemented yet.
+The current app keeps the validated Compose front-end, Room local data layer, and navigation guard while adding secure local session persistence and persistent non-sensitive preferences. Remote authentication, APIs, background sync, upload, and conflict resolution are intentionally not implemented yet.
 
 ## Current Stack
 
@@ -19,6 +19,8 @@ The current app keeps the validated Compose front-end and architecture boundarie
 - Coroutines
 - Hilt
 - Room
+- Android Keystore
+- Preferences DataStore
 - KSP
 - java.time domain timestamps with core library desugaring
 
@@ -32,15 +34,23 @@ The current app keeps the validated Compose front-end and architecture boundarie
 - Domain to Entity mapping and Entity to Domain mapping.
 - One-time local demo seed guarded by a persistent metadata marker.
 - Startup initialization error handling with an explicit retry path.
-- Simulated login, theme preference, and offline toggle for the existing prototype flow.
+- Secure local session persistence with Android Keystore AES/GCM encryption.
+- Session restore, expiry validation, and destructive logout.
+- Persistent theme preference via Preferences DataStore.
+- Local demo credential verification for the existing prototype flow.
+- Simulated offline toggle for the existing prototype flow.
 - Existing UI flow: Bootstrap, Login, Interventions, Detail, Execution, Notes, Photos, Completion, Sync, Settings, Logout.
 
 ## Simulated Or Not Implemented
 
-- Authentication is still simulated and in-memory.
+- Credential verification is local demo only.
+- Access and refresh tokens are synthetic local demo tokens.
+- The offline toggle is a UI simulation, not a system network detector.
+- Remote authentication is not implemented.
+- Server-issued tokens are not implemented.
+- Token refresh endpoint is not implemented.
 - Remote API is not implemented.
 - Network synchronization is not implemented.
-- Token storage is not implemented.
 - WorkManager queue processing is not implemented.
 - Remote photo upload is not implemented.
 - Server conflict resolution is not implemented.
@@ -52,7 +62,15 @@ The current app keeps the validated Compose front-end and architecture boundarie
 - Room schema version: `1`.
 - Schema export: `app/schemas/`.
 - Destructive migrations are not enabled.
-- The operational database is excluded from backup and `allowBackup` is disabled until the security/session policy is finalized.
+- The operational database, secure session storage, and preferences DataStore are excluded from backup rules. `allowBackup` is disabled.
+
+## Session Security
+
+- Secure session storage uses an Android Keystore AES/GCM key with alias `tervyn.session.aes.v1`.
+- The encrypted payload contains the local demo session record: `userId`, synthetic opaque tokens, issue time, access expiry, refresh/session expiry, and schema version.
+- Passwords are never persisted.
+- Session persistence is real, but the credential source remains local demo-only until the remote API phase.
+- See `docs/SECURITY.md` for the Phase 3 threat scope and limitations.
 
 ## Build
 

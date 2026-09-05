@@ -2,8 +2,12 @@
 <data-extraction-rules>
     <cloud-backup>
         <exclude domain="database" path="tervyn.db" />
+        <exclude domain="sharedpref" path="tervyn_secure_session.xml" />
+        <exclude domain="file" path="datastore/tervyn_preferences.preferences_pb" />
     </cloud-backup>
     <device-transfer>
         <exclude domain="database" path="tervyn.db" />
+        <exclude domain="sharedpref" path="tervyn_secure_session.xml" />
+        <exclude domain="file" path="datastore/tervyn_preferences.preferences_pb" />
     </device-transfer>
 </data-extraction-rules>

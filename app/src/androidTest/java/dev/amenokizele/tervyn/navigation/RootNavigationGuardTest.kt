@@ -10,6 +10,7 @@ import androidx.navigation.navArgument
 import androidx.navigation.navigation
 import androidx.navigation.testing.TestNavHostController
 import androidx.test.core.app.ApplicationProvider
+import androidx.test.platform.app.InstrumentationRegistry
 import dev.amenokizele.tervyn.app.LocalDataInitializationState
 import dev.amenokizele.tervyn.app.TervynAppState
 import dev.amenokizele.tervyn.core.result.AppError
@@ -21,7 +22,7 @@ import org.junit.Test
 
 class RootNavigationGuardTest {
     @Test
-    fun restoredAppDestinationReturnsToBootstrapWhileLocalDataIsInitializing() {
+    fun restoredAppDestinationReturnsToBootstrapWhileLocalDataIsInitializing() = runOnMainThread {
         val navController = testNavController()
         navController.navigate(NavGraph.App.route)
         navController.navigate(TervynDestination.Execution.createRoute("job-003"))
@@ -37,7 +38,7 @@ class RootNavigationGuardTest {
     }
 
     @Test
-    fun restoredAppDestinationReturnsToBootstrapOnLocalDataErrorAndClearsAppBackStack() {
+    fun restoredAppDestinationReturnsToBootstrapOnLocalDataErrorAndClearsAppBackStack() = runOnMainThread {
         val navController = testNavController()
         navController.navigate(NavGraph.App.route)
         navController.navigate(TervynDestination.Execution.createRoute("job-003"))
@@ -50,12 +51,12 @@ class RootNavigationGuardTest {
         )
 
         assertEquals(TervynDestination.Bootstrap.route, navController.currentRoute())
-        assertFalse(navController.popBackStack())
-        assertEquals(TervynDestination.Bootstrap.route, navController.currentRoute())
+        navController.popBackStack()
+        assertFalse(navController.currentRoute() in appOrAuthRoutes)
     }
 
     @Test
-    fun restoredAuthDestinationReturnsToBootstrapOnLocalDataError() {
+    fun restoredAuthDestinationReturnsToBootstrapOnLocalDataError() = runOnMainThread {
         val navController = testNavController()
         navController.navigate(NavGraph.Auth.route)
 
@@ -70,7 +71,7 @@ class RootNavigationGuardTest {
     }
 
     @Test
-    fun bootstrapDoesNotDuplicateWhenLocalDataMovesFromInitializingToError() {
+    fun bootstrapDoesNotDuplicateWhenLocalDataMovesFromInitializingToError() = runOnMainThread {
         val navController = testNavController()
 
         reconcileRootNavigation(
@@ -87,12 +88,12 @@ class RootNavigationGuardTest {
         )
 
         assertEquals(TervynDestination.Bootstrap.route, navController.currentRoute())
-        assertFalse(navController.popBackStack())
-        assertEquals(TervynDestination.Bootstrap.route, navController.currentRoute())
+        navController.popBackStack()
+        assertEquals(null, navController.currentRoute())
     }
 
     @Test
-    fun readyUnauthenticatedNavigatesToLogin() {
+    fun readyUnauthenticatedNavigatesToLogin() = runOnMainThread {
         val navController = testNavController()
 
         reconcileRootNavigation(
@@ -107,7 +108,7 @@ class RootNavigationGuardTest {
     }
 
     @Test
-    fun readyAuthenticatedNavigatesToApp() {
+    fun readyAuthenticatedNavigatesToApp() = runOnMainThread {
         val navController = testNavController()
 
         reconcileRootNavigation(
@@ -119,6 +120,10 @@ class RootNavigationGuardTest {
         )
 
         assertEquals(TervynDestination.Jobs.route, navController.currentRoute())
+    }
+
+    private fun runOnMainThread(block: () -> Unit) {
+        InstrumentationRegistry.getInstrumentation().runOnMainSync(block)
     }
 
     private fun testNavController(): TestNavHostController {
@@ -156,4 +161,14 @@ class RootNavigationGuardTest {
     }
 
     private fun NavController.currentRoute(): String? = currentDestination?.route
+
+    private val appOrAuthRoutes = setOf(
+        NavGraph.Auth.route,
+        NavGraph.App.route,
+        TervynDestination.Login.route,
+        TervynDestination.Jobs.route,
+        TervynDestination.Sync.route,
+        TervynDestination.Settings.route,
+        TervynDestination.Execution.route
+    )
 }

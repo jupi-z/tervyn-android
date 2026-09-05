@@ -1,4 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <full-backup-content>
     <exclude domain="database" path="tervyn.db" />
+    <exclude domain="sharedpref" path="tervyn_secure_session.xml" />
+    <exclude domain="file" path="datastore/tervyn_preferences.preferences_pb" />
 </full-backup-content>
