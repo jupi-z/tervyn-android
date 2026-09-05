@@ -19,6 +19,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.navigation.NavController
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -74,32 +75,7 @@ fun TervynNavGraph(
     val loggedOutMessage = stringResource(R.string.message_logged_out)
 
     LaunchedEffect(appState.localDataState, appState.authState) {
-        if (appState.localDataState != LocalDataInitializationState.Ready) {
-            return@LaunchedEffect
-        }
-        when (appState.authState) {
-            AuthState.Checking -> Unit
-            is AuthState.Authenticated -> {
-                navController.navigate(NavGraph.App.route) {
-                    popUpTo(NavGraph.Root.route) {
-                        inclusive = false
-                        saveState = false
-                    }
-                    launchSingleTop = true
-                    restoreState = false
-                }
-            }
-            AuthState.Unauthenticated -> {
-                navController.navigate(NavGraph.Auth.route) {
-                    popUpTo(NavGraph.Root.route) {
-                        inclusive = false
-                        saveState = false
-                    }
-                    launchSingleTop = true
-                    restoreState = false
-                }
-            }
-        }
+        reconcileRootNavigation(navController, appState)
     }
 
     Scaffold(
@@ -300,6 +276,50 @@ fun TervynNavGraph(
                         }
                     )
                 }
+            }
+        }
+    }
+}
+
+internal fun reconcileRootNavigation(
+    navController: NavController,
+    appState: TervynAppState
+) {
+    if (appState.localDataState != LocalDataInitializationState.Ready) {
+        if (navController.currentDestination?.route != TervynDestination.Bootstrap.route) {
+            navController.navigate(TervynDestination.Bootstrap.route) {
+                popUpTo(NavGraph.Root.route) {
+                    inclusive = false
+                    saveState = false
+                }
+                launchSingleTop = true
+                restoreState = false
+            }
+        }
+        return
+    }
+
+    when (appState.authState) {
+        AuthState.Checking -> Unit
+        is AuthState.Authenticated -> {
+            navController.navigate(NavGraph.App.route) {
+                popUpTo(NavGraph.Root.route) {
+                    inclusive = false
+                    saveState = false
+                }
+                launchSingleTop = true
+                restoreState = false
+            }
+        }
+
+        AuthState.Unauthenticated -> {
+            navController.navigate(NavGraph.Auth.route) {
+                popUpTo(NavGraph.Root.route) {
+                    inclusive = false
+                    saveState = false
+                }
+                launchSingleTop = true
+                restoreState = false
             }
         }
     }
