@@ -43,6 +43,20 @@ android {
   }
 }
 
+configurations.configureEach {
+  if (name.contains("AndroidTest", ignoreCase = true)) {
+    // Room migration Android tests load schema JSON with serializers compiled
+    // against kotlinx-serialization 1.8.x; force AndroidTest runtime alignment.
+    resolutionStrategy.force(
+      "org.jetbrains.kotlinx:kotlinx-serialization-bom:1.8.1",
+      "org.jetbrains.kotlinx:kotlinx-serialization-core:1.8.1",
+      "org.jetbrains.kotlinx:kotlinx-serialization-core-jvm:1.8.1",
+      "org.jetbrains.kotlinx:kotlinx-serialization-json:1.8.1",
+      "org.jetbrains.kotlinx:kotlinx-serialization-json-jvm:1.8.1",
+    )
+  }
+}
+
 ksp {
   arg("room.schemaLocation", "$projectDir/schemas")
   arg("room.incremental", "true")
@@ -81,6 +95,7 @@ dependencies {
 
   androidTestImplementation(libs.junit)
   androidTestImplementation(libs.kotlinx.coroutines.test)
+  androidTestImplementation(libs.kotlinx.serialization.json)
   androidTestImplementation(libs.androidx.test.core)
   androidTestImplementation(libs.androidx.test.runner)
   androidTestImplementation(libs.androidx.test.ext.junit)
