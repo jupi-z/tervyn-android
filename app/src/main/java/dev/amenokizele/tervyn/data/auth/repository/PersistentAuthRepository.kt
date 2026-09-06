@@ -20,10 +20,15 @@ import javax.inject.Singleton
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 
 @Singleton
@@ -39,49 +44,61 @@ class PersistentAuthRepository @Inject constructor(
     override val authState: Flow<AuthState> = _authState.asStateFlow()
 
     private var restoredSession: StoredSession? = null
+    private val sessionMutex = Mutex()
 
-    init {
-        applicationScope.launch {
+    private val restoration = applicationScope.launch {
+        sessionMutex.withLock {
             restoreSession()
         }
     }
 
     override suspend fun currentAuthenticatedUser(): User? {
+        restoration.join()
+        return sessionMutex.withLock { currentAuthenticatedUserLocked() }
+    }
+
+    private suspend fun currentAuthenticatedUserLocked(): User? {
         val session = restoredSession ?: return null
         if (isSessionExpired(session, clock.now())) {
-            clearInvalidSession()
-            _authState.value = AuthState.Unauthenticated
+            invalidateSession()
             return null
         }
 
         val user = userDataSource.getUser(session.userId)
         if (user == null) {
-            clearInvalidSession()
-            _authState.value = AuthState.Unauthenticated
+            invalidateSession()
         }
         return user
     }
 
     override suspend fun login(email: String, password: String): AppResult<User> {
-        return when (val authResult = demoAuthGateway.authenticate(email, password)) {
-            is AppResult.Failure -> {
-                _authState.value = AuthState.Unauthenticated
-                AppResult.Failure(authResult.error)
-            }
+        restoration.join()
+        return sessionMutex.withLock {
+            when (val authResult = demoAuthGateway.authenticate(email, password)) {
+                is AppResult.Failure -> AppResult.Failure(authResult.error)
 
-            is AppResult.Success -> loginAuthenticatedDemoUser(authResult.data.userId)
+                is AppResult.Success -> loginAuthenticatedDemoUser(authResult.data.userId)
+            }
         }
     }
 
     override suspend fun logout(): AppResult<Unit> {
-        return when (val clearResult = secureSessionStore.clear()) {
-            is AppResult.Success -> {
-                restoredSession = null
-                _authState.value = AuthState.Unauthenticated
-                AppResult.Success(Unit)
-            }
+        restoration.join()
+        return sessionMutex.withLock {
+            currentCoroutineContext().ensureActive()
+            val result = withContext(NonCancellable) {
+                when (val clearResult = secureSessionStore.clear()) {
+                    is AppResult.Success -> {
+                        restoredSession = null
+                        _authState.value = AuthState.Unauthenticated
+                        AppResult.Success(Unit)
+                    }
 
-            is AppResult.Failure -> AppResult.Failure(clearResult.error)
+                    is AppResult.Failure -> AppResult.Failure(clearResult.error)
+                }
+            }
+            currentCoroutineContext().ensureActive()
+            result
         }
     }
 
@@ -90,18 +107,21 @@ class PersistentAuthRepository @Inject constructor(
             ?: return AppResult.Failure(AppError.Authentication("local_user_missing"))
         val session = createDemoSession(user.id, clock.now())
 
-        return when (val writeResult = secureSessionStore.write(session)) {
-            is AppResult.Success -> {
-                restoredSession = session
-                _authState.value = AuthState.Authenticated(user)
-                AppResult.Success(user)
-            }
+        currentCoroutineContext().ensureActive()
+        // Once persistence starts, publish its result before honoring caller cancellation.
+        val result = withContext(NonCancellable) {
+            when (val writeResult = secureSessionStore.write(session)) {
+                is AppResult.Success -> {
+                    restoredSession = session
+                    _authState.value = AuthState.Authenticated(user)
+                    AppResult.Success(user)
+                }
 
-            is AppResult.Failure -> {
-                _authState.value = AuthState.Unauthenticated
-                AppResult.Failure(writeResult.error)
+                is AppResult.Failure -> AppResult.Failure(writeResult.error)
             }
         }
+        currentCoroutineContext().ensureActive()
+        return result
     }
 
     private suspend fun restoreSession() {
@@ -109,15 +129,13 @@ class PersistentAuthRepository @Inject constructor(
             when (val readResult = secureSessionStore.read()) {
                 is AppResult.Success -> restoreSession(readResult.data)
                 is AppResult.Failure -> {
-                    clearInvalidSession()
-                    _authState.value = AuthState.Unauthenticated
+                    invalidateSession()
                 }
             }
         } catch (exception: CancellationException) {
             throw exception
         } catch (exception: Exception) {
-            clearInvalidSession()
-            _authState.value = AuthState.Unauthenticated
+            invalidateSession()
         }
     }
 
@@ -127,15 +145,13 @@ class PersistentAuthRepository @Inject constructor(
             return
         }
         if (isSessionExpired(session, clock.now())) {
-            clearInvalidSession()
-            _authState.value = AuthState.Unauthenticated
+            invalidateSession()
             return
         }
 
         val user = userDataSource.getUser(session.userId)
         if (user == null) {
-            clearInvalidSession()
-            _authState.value = AuthState.Unauthenticated
+            invalidateSession()
             return
         }
 
@@ -143,9 +159,14 @@ class PersistentAuthRepository @Inject constructor(
         _authState.value = AuthState.Authenticated(user)
     }
 
-    private suspend fun clearInvalidSession() {
-        restoredSession = null
-        secureSessionStore.clear()
+    private suspend fun invalidateSession() {
+        currentCoroutineContext().ensureActive()
+        withContext(NonCancellable) {
+            secureSessionStore.clear()
+            restoredSession = null
+            _authState.value = AuthState.Unauthenticated
+        }
+        currentCoroutineContext().ensureActive()
     }
 
     private fun isSessionExpired(session: StoredSession, now: Instant): Boolean {

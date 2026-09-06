@@ -11,14 +11,21 @@ import dev.amenokizele.tervyn.data.auth.session.StoredSession
 import dev.amenokizele.tervyn.domain.model.AuthState
 import dev.amenokizele.tervyn.domain.model.User
 import java.time.Instant
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.test.runCurrent
+import kotlinx.coroutines.withContext
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -252,8 +259,264 @@ class PersistentAuthRepositoryTest {
         assertEquals(AuthState.Authenticated(user), secondRepository.authState.first())
     }
 
+    @Test
+    fun expiredAccessTokenWithValidRefreshSessionRemainsAuthenticated() = runTest {
+        val session = validSession().copy(
+            issuedAt = now.minusSeconds(901),
+            accessTokenExpiresAt = now.minusSeconds(1),
+            refreshTokenExpiresAt = now.plusSeconds(86_400)
+        )
+        val store = FakeSecureSessionStore(AppResult.Success(session))
+        val repository = repository(sessionStore = store)
+        advanceUntilIdle()
+
+        assertEquals(AuthState.Authenticated(user()), repository.authState.first())
+        assertEquals(user(), repository.currentAuthenticatedUser())
+        assertEquals(0, store.clearCalls)
+        assertEquals(session, store.storedSession)
+    }
+
+    @Test
+    fun failedReloginPreservesExistingSessionAndCurrentUser() = runTest {
+        val session = validSession()
+        val store = FakeSecureSessionStore(AppResult.Success(session))
+        val repository = repository(
+            sessionStore = store,
+            demoAuthGateway = FakeDemoAuthGateway(
+                AppResult.Failure(AppError.Authentication("invalid_credentials"))
+            )
+        )
+        advanceUntilIdle()
+
+        assertEquals(
+            AppResult.Failure(AppError.Authentication("invalid_credentials")),
+            repository.login("other@tervyn.demo", "wrong")
+        )
+        assertEquals(AuthState.Authenticated(user()), repository.authState.first())
+        assertEquals(user(), repository.currentAuthenticatedUser())
+        assertEquals(session, store.storedSession)
+        assertEquals(0, store.writeCalls)
+        assertEquals(0, store.clearCalls)
+    }
+
+    @Test
+    fun missingNewLocalUserPreservesExistingSession() = runTest {
+        val session = validSession()
+        val store = FakeSecureSessionStore(AppResult.Success(session))
+        val repository = repository(
+            sessionStore = store,
+            demoAuthGateway = FakeDemoAuthGateway(
+                AppResult.Success(DemoAuthGateway.AuthenticatedDemoUser("missing-user"))
+            )
+        )
+        advanceUntilIdle()
+
+        assertEquals(
+            AppResult.Failure(AppError.Authentication("local_user_missing")),
+            repository.login("other@tervyn.demo", "demo-password")
+        )
+        assertEquals(AuthState.Authenticated(user()), repository.authState.first())
+        assertEquals(user(), repository.currentAuthenticatedUser())
+        assertEquals(session, store.storedSession)
+        assertEquals(0, store.writeCalls)
+        assertEquals(0, store.clearCalls)
+    }
+
+    @Test
+    fun failedNewSessionWritePreservesExistingSessionAndCurrentUser() = runTest {
+        val session = validSession()
+        val newUser = user("other-user")
+        val store = FakeSecureSessionStore(
+            AppResult.Success(session),
+            writeResult = AppResult.Failure(AppError.Storage("secure_session_write_failed"))
+        )
+        val repository = repository(
+            sessionStore = store,
+            demoAuthGateway = FakeDemoAuthGateway(
+                AppResult.Success(DemoAuthGateway.AuthenticatedDemoUser(newUser.id))
+            ),
+            userDataSource = FakeLocalUserDataSource(mapOf(user().id to user(), newUser.id to newUser))
+        )
+        advanceUntilIdle()
+
+        assertEquals(
+            AppResult.Failure(AppError.Storage("secure_session_write_failed")),
+            repository.login(newUser.email, "demo-password")
+        )
+        assertEquals(AuthState.Authenticated(user()), repository.authState.first())
+        assertEquals(user(), repository.currentAuthenticatedUser())
+        assertEquals(session, store.storedSession)
+        assertEquals(1, store.writeCalls)
+        assertEquals(0, store.clearCalls)
+        val recreated = repository(sessionStore = store)
+        advanceUntilIdle()
+        assertEquals(AuthState.Authenticated(user()), recreated.authState.first())
+    }
+
+    @Test
+    fun newSessionIsPublishedOnlyAfterWriteCompletes() = runTest {
+        val oldSession = validSession()
+        val newUser = user("other-user")
+        val releaseWrite = CompletableDeferred<Unit>()
+        val store = FakeSecureSessionStore(AppResult.Success(oldSession), beforeWrite = { releaseWrite.await() })
+        val repository = repository(
+            sessionStore = store,
+            demoAuthGateway = FakeDemoAuthGateway(
+                AppResult.Success(DemoAuthGateway.AuthenticatedDemoUser(newUser.id))
+            ),
+            userDataSource = FakeLocalUserDataSource(mapOf(user().id to user(), newUser.id to newUser))
+        )
+        advanceUntilIdle()
+
+        val login = async { repository.login(newUser.email, "demo-password") }
+        runCurrent()
+        assertFalse(login.isCompleted)
+        assertEquals(AuthState.Authenticated(user()), repository.authState.first())
+        assertEquals(oldSession, store.storedSession)
+
+        releaseWrite.complete(Unit)
+        assertEquals(AppResult.Success(newUser), login.await())
+        assertEquals(AuthState.Authenticated(newUser), repository.authState.first())
+        assertEquals(newUser, repository.currentAuthenticatedUser())
+        assertEquals(newUser.id, store.storedSession?.userId)
+    }
+
+    @Test
+    fun logoutWaitsForInFlightLoginAndLeavesNoSession() = runTest {
+        val releaseWrite = CompletableDeferred<Unit>()
+        val store = FakeSecureSessionStore(AppResult.Success(validSession()), beforeWrite = { releaseWrite.await() })
+        val repository = repository(sessionStore = store)
+        advanceUntilIdle()
+        val login = async { repository.login("amina@tervyn.demo", "tervyn2026") }
+        runCurrent()
+
+        val logout = async { repository.logout() }
+        runCurrent()
+        assertFalse(logout.isCompleted)
+        assertEquals(0, store.clearCalls)
+        releaseWrite.complete(Unit)
+
+        assertTrue(login.await() is AppResult.Success)
+        assertEquals(AppResult.Success(Unit), logout.await())
+        assertEquals(AuthState.Unauthenticated, repository.authState.first())
+        assertEquals(null, repository.currentAuthenticatedUser())
+        assertEquals(null, store.storedSession)
+    }
+
+    @Test
+    fun loginWaitsForRestoreInsteadOfBeingOverwrittenByIt() = runTest {
+        val releaseRead = CompletableDeferred<Unit>()
+        val store = FakeSecureSessionStore(AppResult.Success(null), beforeRead = { releaseRead.await() })
+        val repository = repository(sessionStore = store)
+        runCurrent()
+        val login = async { repository.login("amina@tervyn.demo", "tervyn2026") }
+        runCurrent()
+        assertFalse(login.isCompleted)
+        assertEquals(0, store.writeCalls)
+
+        releaseRead.complete(Unit)
+        assertTrue(login.await() is AppResult.Success)
+        assertEquals(AuthState.Authenticated(user()), repository.authState.first())
+        assertEquals(user(), repository.currentAuthenticatedUser())
+        assertEquals(user().id, store.storedSession?.userId)
+    }
+
+    @Test
+    fun cancelledLoginBeforeWritePreservesSessionAndReleasesLock() = runTest {
+        val session = validSession()
+        val store = FakeSecureSessionStore(AppResult.Success(session))
+        val repository = repository(
+            sessionStore = store,
+            demoAuthGateway = object : DemoAuthGateway {
+                override suspend fun authenticate(email: String, password: String): AppResult<DemoAuthGateway.AuthenticatedDemoUser> {
+                    throw CancellationException("cancelled login")
+                }
+            }
+        )
+        advanceUntilIdle()
+        val login = async { repository.login("amina@tervyn.demo", "tervyn2026") }
+        runCurrent()
+        assertTrue(login.isCancelled)
+        assertEquals(AuthState.Authenticated(user()), repository.authState.first())
+        assertEquals(user(), repository.currentAuthenticatedUser())
+        assertEquals(session, store.storedSession)
+        assertEquals(0, store.writeCalls)
+        assertEquals(AppResult.Success(Unit), repository.logout())
+    }
+
+    @Test
+    fun cancellationAtWriteCommitDoesNotLeaveMemoryBehindStorage() = runTest {
+        val backingStore = FakeSecureSessionStore(AppResult.Success(null))
+        val dispatcher = StandardTestDispatcher(testScheduler)
+        lateinit var login: Job
+        val store = object : SecureSessionStore by backingStore {
+            override suspend fun write(session: StoredSession): AppResult<Unit> = withContext(dispatcher) {
+                backingStore.write(session).also { login.cancel() }
+            }
+        }
+        val repository = repository(sessionStore = store)
+        advanceUntilIdle()
+
+        login = async { repository.login("amina@tervyn.demo", "tervyn2026") }
+        advanceUntilIdle()
+
+        assertTrue(login.isCancelled)
+        assertEquals(user().id, backingStore.storedSession?.userId)
+        assertEquals(AuthState.Authenticated(user()), repository.authState.first())
+        assertEquals(user(), repository.currentAuthenticatedUser())
+    }
+
+    @Test
+    fun cancellationAtLogoutCommitDoesNotLeaveAuthenticatedMemory() = runTest {
+        val backingStore = FakeSecureSessionStore(AppResult.Success(validSession()))
+        val dispatcher = StandardTestDispatcher(testScheduler)
+        lateinit var logout: Job
+        val store = object : SecureSessionStore by backingStore {
+            override suspend fun clear(): AppResult<Unit> = withContext(dispatcher) {
+                backingStore.clear().also { logout.cancel() }
+            }
+        }
+        val repository = repository(sessionStore = store)
+        advanceUntilIdle()
+
+        logout = async { repository.logout() }
+        advanceUntilIdle()
+
+        assertTrue(logout.isCancelled)
+        assertEquals(null, backingStore.storedSession)
+        assertEquals(AuthState.Unauthenticated, repository.authState.first())
+        assertEquals(null, repository.currentAuthenticatedUser())
+    }
+
+    @Test
+    fun cancellationAtExpiryCleanupDoesNotLeaveAuthenticatedMemory() = runTest {
+        val clock = FakeTervynClock(now)
+        val backingStore = FakeSecureSessionStore(AppResult.Success(validSession()))
+        val dispatcher = StandardTestDispatcher(testScheduler)
+        lateinit var currentUser: Job
+        val store = object : SecureSessionStore by backingStore {
+            override suspend fun clear(): AppResult<Unit> = withContext(dispatcher) {
+                backingStore.clear().also { currentUser.cancel() }
+            }
+        }
+        val repository = repository(
+            sessionStore = store,
+            clock = clock
+        )
+        advanceUntilIdle()
+        clock.advance(604_801)
+
+        currentUser = async { repository.currentAuthenticatedUser() }
+        advanceUntilIdle()
+
+        assertTrue(currentUser.isCancelled)
+        assertEquals(null, backingStore.storedSession)
+        assertEquals(AuthState.Unauthenticated, repository.authState.first())
+        assertEquals(null, repository.currentAuthenticatedUser())
+    }
+
     private fun TestScope.repository(
-        sessionStore: FakeSecureSessionStore = FakeSecureSessionStore(AppResult.Success(null)),
+        sessionStore: SecureSessionStore = FakeSecureSessionStore(AppResult.Success(null)),
         demoAuthGateway: DemoAuthGateway = FakeDemoAuthGateway(
             AppResult.Success(DemoAuthGateway.AuthenticatedDemoUser("user-amina"))
         ),
@@ -295,8 +558,12 @@ class PersistentAuthRepositoryTest {
     private class FakeSecureSessionStore(
         private val readResult: AppResult<StoredSession?>,
         private val writeResult: AppResult<Unit> = AppResult.Success(Unit),
-        private val clearResult: AppResult<Unit> = AppResult.Success(Unit)
+        private val clearResult: AppResult<Unit> = AppResult.Success(Unit),
+        private val beforeWrite: suspend () -> Unit = {},
+        private val beforeRead: suspend () -> Unit = {}
     ) : SecureSessionStore {
+        var storedSession: StoredSession? = (readResult as? AppResult.Success)?.data
+            private set
         var writtenSession: StoredSession? = null
             private set
         var writeCalls = 0
@@ -304,18 +571,25 @@ class PersistentAuthRepositoryTest {
         var clearCalls = 0
             private set
 
-        override suspend fun read(): AppResult<StoredSession?> = readResult
+        override suspend fun read(): AppResult<StoredSession?> {
+            val result = if (readResult is AppResult.Failure) readResult else AppResult.Success(storedSession)
+            beforeRead()
+            return result
+        }
 
         override suspend fun write(session: StoredSession): AppResult<Unit> {
             writeCalls += 1
+            beforeWrite()
             if (writeResult is AppResult.Success) {
                 writtenSession = session
+                storedSession = session
             }
             return writeResult
         }
 
         override suspend fun clear(): AppResult<Unit> {
             clearCalls += 1
+            if (clearResult is AppResult.Success) storedSession = null
             return clearResult
         }
     }

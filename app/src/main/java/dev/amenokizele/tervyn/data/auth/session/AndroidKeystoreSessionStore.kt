@@ -48,7 +48,7 @@ class AndroidKeystoreSessionStore @Inject constructor(
             val ciphertext = preferences().getString(KEY_CIPHERTEXT, null)
             val iv = preferences().getString(KEY_IV, null)
             if (ciphertext.isNullOrBlank() || iv.isNullOrBlank()) {
-                return@withContext AppResult.Success(null)
+                return@withContext if (preferences().all.isEmpty()) AppResult.Success(null) else failClosed()
             }
 
             val cipher = Cipher.getInstance(TRANSFORMATION)
@@ -57,8 +57,7 @@ class AndroidKeystoreSessionStore @Inject constructor(
             if (session.schemaVersion == StoredSession.SCHEMA_VERSION) {
                 AppResult.Success(session)
             } else {
-                clearStoredPayload()
-                AppResult.Success(null)
+                failClosed()
             }
         } catch (exception: CancellationException) {
             throw exception
@@ -92,7 +91,10 @@ class AndroidKeystoreSessionStore @Inject constructor(
         } catch (exception: CancellationException) {
             throw exception
         } catch (exception: KeyPermanentlyInvalidatedException) {
-            deleteKey()
+            failClosed(deleteKey = true)
+            AppResult.Failure(AppError.Storage("secure_session_write_failed"))
+        } catch (exception: UnrecoverableKeyException) {
+            failClosed(deleteKey = true)
             AppResult.Failure(AppError.Storage("secure_session_write_failed"))
         } catch (exception: Exception) {
             AppResult.Failure(AppError.Storage("secure_session_write_failed"))
@@ -122,11 +124,31 @@ class AndroidKeystoreSessionStore @Inject constructor(
     private fun clearStoredPayload(): Boolean = preferences().edit().clear().commit()
 
     private fun failClosed(deleteKey: Boolean = false): AppResult.Success<Nothing?> {
-        clearStoredPayload()
+        clearStoredPayloadBestEffort()
         if (deleteKey) {
-            deleteKey()
+            deleteKeyBestEffort()
         }
         return AppResult.Success(null)
+    }
+
+    private fun clearStoredPayloadBestEffort() {
+        try {
+            clearStoredPayload()
+        } catch (exception: CancellationException) {
+            throw exception
+        } catch (_: Exception) {
+            // Recovery must remain fail-closed even when storage is unavailable.
+        }
+    }
+
+    private fun deleteKeyBestEffort() {
+        try {
+            deleteKey()
+        } catch (exception: CancellationException) {
+            throw exception
+        } catch (_: Exception) {
+            // An unavailable Keystore must not escape from security recovery.
+        }
     }
 
     private fun getOrCreateKey(): SecretKey {

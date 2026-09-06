@@ -38,6 +38,12 @@ The refresh-token expiry is the Phase 3 persistent session boundary. An expired 
 
 If encrypted storage is corrupted, tampered with, unreadable, or the Keystore key cannot be trusted, the application clears the stored payload on a best-effort basis and treats the user as unauthenticated.
 
+Recovery attempts payload cleanup and, for invalidated or unrecoverable keys, key deletion independently. Cleanup failures cannot return a session or escape as ordinary recovery exceptions. Coroutine cancellation is still propagated. A write with an unusable key fails; the next explicit login can create a new key.
+
+## Session Consistency
+
+A failed re-login (invalid credentials, missing local user, or failed session write) preserves the existing authenticated session. A new session is published in memory only after secure storage reports a successful write. Restore, login, logout, and current-user expiry checks are serialized with a coroutine mutex. Persistence and memory publication complete together before honoring caller cancellation; authentication and lock waiting remain cancellable.
+
 ## Backup Policy
 
 `android:allowBackup` remains `false`. Backup and data-extraction rules also exclude the Room database, secure session preferences, and Preferences DataStore file.

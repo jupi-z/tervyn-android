@@ -7,6 +7,7 @@ import androidx.datastore.preferences.core.emptyPreferences
 import androidx.datastore.preferences.core.stringPreferencesKey
 import dev.amenokizele.tervyn.domain.model.ThemeMode
 import dev.amenokizele.tervyn.domain.repository.UserPreferencesRepository
+import java.io.IOException
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.flow.Flow
@@ -18,7 +19,13 @@ class DataStoreUserPreferencesRepository @Inject constructor(
     private val dataStore: DataStore<Preferences>
 ) : UserPreferencesRepository {
     override val themeMode: Flow<ThemeMode> = dataStore.data
-        .catch { emit(emptyPreferences()) }
+        .catch { exception ->
+            if (exception is IOException) {
+                emit(emptyPreferences())
+            } else {
+                throw exception
+            }
+        }
         .map { preferences ->
             preferences[THEME_MODE_KEY]?.let { raw ->
                 ThemeMode.entries.firstOrNull { mode -> mode.name == raw }
