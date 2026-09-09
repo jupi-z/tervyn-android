@@ -34,7 +34,7 @@ The current app keeps the validated Compose front-end, Room local data layer, an
 - Domain to Entity mapping and Entity to Domain mapping.
 - One-time local demo seed guarded by a persistent metadata marker.
 - Startup initialization error handling with an explicit retry path.
-- Secure local session persistence with Android Keystore AES/GCM encryption.
+- Secure local session persistence with Android Keystore AES/GCM encryption and app-private AtomicFile storage.
 - Session restore, expiry validation, and destructive logout.
 - Persistent theme preference via Preferences DataStore.
 - Local demo credential verification for the existing prototype flow.
@@ -66,8 +66,10 @@ The current app keeps the validated Compose front-end, Room local data layer, an
 
 ## Session Security
 
-- Secure session storage uses an Android Keystore AES/GCM key with alias `tervyn.session.aes.v1`.
-- The encrypted payload contains the local demo session record: `userId`, synthetic opaque tokens, issue time, access expiry, refresh/session expiry, and schema version.
+- Secure session storage uses an Android Keystore AES/GCM key with alias `tervyn.session.aes.v2`.
+- The encrypted app-private AtomicFile envelope contains the local demo session record: `userId`, synthetic opaque tokens, issue time, access expiry, refresh/session expiry, and schema version.
+- Session writes and clears are committed atomically. Logout writes a durable `EMPTY` tombstone instead of deleting the file as the primary clear mechanism.
+- Upgrading from v0.4.1 invalidates the previous local demo session once; the user reconnects through the local demo login flow.
 - Passwords are never persisted.
 - Session persistence is real, but the credential source remains local demo-only until the remote API phase.
 - See `docs/SECURITY.md` for the Phase 3 threat scope and limitations.

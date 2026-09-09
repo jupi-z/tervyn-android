@@ -59,11 +59,11 @@ Login UI
             -> LocalDemoAuthGateway
             -> SecureSessionStore
                -> Android Keystore AES/GCM
-               -> private encrypted SharedPreferences payload
+               -> app-private AtomicFile encrypted envelope
             -> Room UserDao
 ```
 
-`PersistentAuthRepository` owns the reactive `AuthState`, restores a valid encrypted session on startup, validates refresh/session expiry, resolves the authenticated user from Room, and clears the secure payload on logout. Credential verification is intentionally local demo-only in Phase 3.
+`PersistentAuthRepository` owns the reactive `AuthState`, restores a valid encrypted session on startup, validates refresh/session expiry, resolves the authenticated user from Room, and clears the secure payload on logout. `AndroidKeystoreSessionStore` keeps the AES/GCM key in Android Keystore and stores a versioned encrypted `SESSION` or durable `EMPTY` tombstone envelope through `AtomicFile`. Credential verification is intentionally local demo-only in Phase 3.
 
 Synthetic local demo tokens are opaque random values. They are not JWTs, are not sent over the network, and are stored only inside the encrypted session payload.
 
