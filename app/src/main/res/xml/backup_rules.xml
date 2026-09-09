@@ -2,6 +2,6 @@
 <full-backup-content>
     <exclude domain="database" path="tervyn.db" />
     <exclude domain="sharedpref" path="tervyn_secure_session.xml" />
-    <exclude domain="file" path="secure/tervyn_secure_session_v2.bin" />
+    <exclude domain="file" path="secure/" />
     <exclude domain="file" path="datastore/tervyn_preferences.preferences_pb" />
 </full-backup-content>
