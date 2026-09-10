@@ -1,0 +1,592 @@
+openapi: 3.0.3
+info:
+  title: Tervyn Remote API
+  version: 1.0.0
+  description: Client-side contract expected by the Android app. This document does not claim that a public Tervyn backend exists.
+servers:
+  - url: https://tervyn.invalid
+    description: Placeholder invalid production URL.
+paths:
+  /v1/auth/login:
+    post:
+      summary: Login with remote credentials.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Authenticated user and opaque session tokens.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+        '401':
+          $ref: '#/components/responses/AuthError'
+  /v1/auth/refresh:
+    post:
+      summary: Rotate or refresh opaque session tokens.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RefreshRequest'
+      responses:
+        '200':
+          description: Full replacement session token set.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RefreshResponse'
+        '401':
+          $ref: '#/components/responses/AuthError'
+  /v1/auth/logout:
+    post:
+      summary: Best-effort remote refresh-token revocation.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LogoutRequest'
+      responses:
+        '204':
+          description: Revoked or accepted.
+        '401':
+          $ref: '#/components/responses/AuthError'
+  /v1/me:
+    get:
+      summary: Return the current authenticated user.
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Current user.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '401':
+          $ref: '#/components/responses/AuthError'
+  /v1/jobs:
+    get:
+      summary: List remote job snapshots.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: cursor
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 50
+        - name: updatedAfter
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date-time
+      responses:
+        '200':
+          description: Job page.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JobsPage'
+        '401':
+          $ref: '#/components/responses/AuthError'
+  /v1/jobs/{jobId}:
+    get:
+      summary: Get one remote job snapshot.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/JobId'
+      responses:
+        '200':
+          description: Job snapshot.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Job'
+        '401':
+          $ref: '#/components/responses/AuthError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+  /v1/jobs/{jobId}/status:
+    patch:
+      summary: Mutate job status for future outbox execution.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/JobId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/IfMatch'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/JobStatusMutationRequest'
+      responses:
+        '200':
+          description: Mutation result.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JobMutationResponse'
+        '401':
+          $ref: '#/components/responses/AuthError'
+        '409':
+          $ref: '#/components/responses/ConflictError'
+        '412':
+          $ref: '#/components/responses/ConflictError'
+  /v1/jobs/{jobId}/checklist/{itemId}:
+    patch:
+      summary: Mutate one checklist item for future outbox execution.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/JobId'
+        - name: itemId
+          in: path
+          required: true
+          schema:
+            type: string
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/IfMatch'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChecklistMutationRequest'
+      responses:
+        '200':
+          description: Updated checklist item.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChecklistItem'
+        '401':
+          $ref: '#/components/responses/AuthError'
+  /v1/jobs/{jobId}/notes:
+    post:
+      summary: Create a note for future outbox execution.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/JobId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NoteCreateRequest'
+      responses:
+        '200':
+          description: Created note.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Note'
+        '401':
+          $ref: '#/components/responses/AuthError'
+  /v1/jobs/{jobId}/attachments/{attachmentId}:
+    delete:
+      summary: Delete attachment metadata for future outbox execution.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/JobId'
+        - name: attachmentId
+          in: path
+          required: true
+          schema:
+            type: string
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/IfMatch'
+      responses:
+        '204':
+          description: Metadata deleted.
+        '401':
+          $ref: '#/components/responses/AuthError'
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: opaque
+  parameters:
+    JobId:
+      name: jobId
+      in: path
+      required: true
+      schema:
+        type: string
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: true
+      schema:
+        type: string
+    IfMatch:
+      name: If-Match
+      in: header
+      required: true
+      description: Stable quoted server version, for example `"42"`.
+      schema:
+        type: string
+  responses:
+    AuthError:
+      description: Authentication error.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorEnvelope'
+    NotFoundError:
+      description: Resource not found.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorEnvelope'
+    ConflictError:
+      description: Version or mutation conflict.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorEnvelope'
+  schemas:
+    ErrorEnvelope:
+      type: object
+      properties:
+        error:
+          $ref: '#/components/schemas/Error'
+    Error:
+      type: object
+      required: [code]
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+        requestId:
+          type: string
+        fieldErrors:
+          type: object
+          additionalProperties:
+            type: array
+            items:
+              type: string
+    LoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+    LoginResponse:
+      type: object
+      required: [user, session]
+      properties:
+        user:
+          $ref: '#/components/schemas/User'
+        session:
+          $ref: '#/components/schemas/Session'
+    RefreshRequest:
+      type: object
+      required: [refreshToken]
+      properties:
+        refreshToken:
+          type: string
+    RefreshResponse:
+      type: object
+      required: [accessToken, refreshToken, issuedAt, accessTokenExpiresAt, refreshTokenExpiresAt]
+      properties:
+        accessToken:
+          type: string
+        refreshToken:
+          type: string
+        issuedAt:
+          type: string
+          format: date-time
+        accessTokenExpiresAt:
+          type: string
+          format: date-time
+        refreshTokenExpiresAt:
+          type: string
+          format: date-time
+    LogoutRequest:
+      type: object
+      required: [refreshToken]
+      properties:
+        refreshToken:
+          type: string
+    Session:
+      allOf:
+        - $ref: '#/components/schemas/RefreshResponse'
+    User:
+      type: object
+      required: [id, email, firstName, lastName]
+      properties:
+        id:
+          type: string
+        email:
+          type: string
+          format: email
+        firstName:
+          type: string
+        lastName:
+          type: string
+        jobTitle:
+          type: string
+          nullable: true
+        avatarUrl:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    JobsPage:
+      type: object
+      required: [items, serverTime]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Job'
+        nextCursor:
+          type: string
+          nullable: true
+        serverTime:
+          type: string
+          format: date-time
+    Job:
+      type: object
+      required: [id, reference, title, clientName, siteName, priority, status, scheduledAt, serverVersion, createdAt, updatedAt]
+      properties:
+        id:
+          type: string
+        reference:
+          type: string
+        title:
+          type: string
+        description:
+          type: string
+          nullable: true
+        clientName:
+          type: string
+        siteName:
+          type: string
+        siteAddress:
+          type: string
+          nullable: true
+        priority:
+          type: string
+          enum: [LOW, NORMAL, HIGH, URGENT]
+        status:
+          type: string
+          enum: [ASSIGNED, IN_PROGRESS, COMPLETED]
+        scheduledAt:
+          type: string
+          format: date-time
+        startedAt:
+          type: string
+          format: date-time
+          nullable: true
+        completedAt:
+          type: string
+          format: date-time
+          nullable: true
+        serverVersion:
+          type: integer
+          format: int64
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        checklist:
+          type: array
+          items:
+            $ref: '#/components/schemas/ChecklistItem'
+        notes:
+          type: array
+          items:
+            $ref: '#/components/schemas/Note'
+        attachments:
+          type: array
+          items:
+            $ref: '#/components/schemas/Attachment'
+    ChecklistItem:
+      type: object
+      required: [id, jobId, label, position, required, completed, serverVersion, updatedAt]
+      properties:
+        id:
+          type: string
+        jobId:
+          type: string
+        label:
+          type: string
+        position:
+          type: integer
+        required:
+          type: boolean
+        completed:
+          type: boolean
+        completedAt:
+          type: string
+          format: date-time
+          nullable: true
+        serverVersion:
+          type: integer
+          format: int64
+        updatedAt:
+          type: string
+          format: date-time
+    Note:
+      type: object
+      required: [id, jobId, authorUserId, content, createdAt, updatedAt]
+      properties:
+        id:
+          type: string
+        jobId:
+          type: string
+        authorUserId:
+          type: string
+        content:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        serverVersion:
+          type: integer
+          format: int64
+          nullable: true
+        deletedAt:
+          type: string
+          format: date-time
+          nullable: true
+    Attachment:
+      type: object
+      required: [id, jobId, authorUserId, type, mimeType, sizeBytes, createdAt]
+      properties:
+        id:
+          type: string
+        jobId:
+          type: string
+        authorUserId:
+          type: string
+        type:
+          type: string
+          enum: [PHOTO]
+        remoteUrl:
+          type: string
+          nullable: true
+        mimeType:
+          type: string
+        fileName:
+          type: string
+          nullable: true
+        sizeBytes:
+          type: integer
+          format: int64
+        checksumSha256:
+          type: string
+          nullable: true
+        serverVersion:
+          type: integer
+          format: int64
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        uploadedAt:
+          type: string
+          format: date-time
+          nullable: true
+        deletedAt:
+          type: string
+          format: date-time
+          nullable: true
+    JobStatusMutationRequest:
+      type: object
+      required: [status]
+      properties:
+        status:
+          type: string
+          enum: [IN_PROGRESS, COMPLETED]
+        startedAt:
+          type: string
+          format: date-time
+          nullable: true
+        completedAt:
+          type: string
+          format: date-time
+          nullable: true
+    JobMutationResponse:
+      type: object
+      required: [id, serverVersion, updatedAt, status]
+      properties:
+        id:
+          type: string
+        serverVersion:
+          type: integer
+          format: int64
+        updatedAt:
+          type: string
+          format: date-time
+        status:
+          type: string
+          enum: [ASSIGNED, IN_PROGRESS, COMPLETED]
+        startedAt:
+          type: string
+          format: date-time
+          nullable: true
+        completedAt:
+          type: string
+          format: date-time
+          nullable: true
+    ChecklistMutationRequest:
+      type: object
+      required: [completed]
+      properties:
+        completed:
+          type: boolean
+        completedAt:
+          type: string
+          format: date-time
+          nullable: true
+    NoteCreateRequest:
+      type: object
+      required: [id, content, createdAt]
+      properties:
+        id:
+          type: string
+        content:
+          type: string
+        createdAt:
+          type: string
+          format: date-time

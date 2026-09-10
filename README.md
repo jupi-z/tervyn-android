@@ -4,9 +4,9 @@ Offline-first field operations for Android.
 
 ## Status
 
-Secure session foundation / Room-backed Android app.
+Remote API client foundation / Room-backed offline-first Android app.
 
-The current app keeps the validated Compose front-end, Room local data layer, and navigation guard while adding secure local session persistence and persistent non-sensitive preferences. Remote authentication, APIs, background sync, upload, and conflict resolution are intentionally not implemented yet.
+The current app keeps Room as the UI source of truth and adds a real Retrofit/OkHttp client foundation for future remote integration. No public Tervyn backend is bundled or claimed. Remote mode is disabled by default, and the local demo login remains the default runnable mode.
 
 ## Current Stack
 
@@ -19,6 +19,9 @@ The current app keeps the validated Compose front-end, Room local data layer, an
 - Coroutines
 - Hilt
 - Room
+- Retrofit
+- OkHttp
+- Kotlin Serialization
 - Android Keystore
 - Preferences DataStore
 - KSP
@@ -26,35 +29,51 @@ The current app keeps the validated Compose front-end, Room local data layer, an
 
 ## Implemented
 
-- Room local persistence.
-- Room as the source of truth for jobs, checklist items, notes, attachments, and local sync operations.
-- Persistent jobs, checklist, notes, and attachment metadata.
-- Persistent local outbox via `SyncOperationEntity`.
+- Room local persistence for jobs, checklist items, notes, attachments, and local sync operations.
+- Room-backed `JobRepository` as the source of truth observed by the UI.
+- Persistent local outbox rows via `SyncOperationEntity`.
 - Transactional local mutations that write business data and outbox rows atomically.
-- Domain to Entity mapping and Entity to Domain mapping.
 - One-time local demo seed guarded by a persistent metadata marker.
 - Startup initialization error handling with an explicit retry path.
-- Secure local session persistence with Android Keystore AES/GCM encryption and app-private AtomicFile storage.
-- Session restore, expiry validation, and destructive logout.
+- Secure session persistence with Android Keystore AES/GCM encryption and app-private AtomicFile storage.
+- Session restore, expiry validation, logout, and a `SessionCoordinator` memory snapshot.
 - Persistent theme preference via Preferences DataStore.
-- Local demo credential verification for the existing prototype flow.
-- Simulated offline toggle for the existing prototype flow.
+- Local demo credential verification for the default runnable flow.
+- Remote API opt-in configuration through BuildConfig.
+- Retrofit/OkHttp network stack with public and authenticated clients.
+- Remote auth client for login, refresh, logout, and me endpoints.
+- Bearer token injection from in-memory session state.
+- Single-flight 401 refresh with one retry maximum.
+- Remote job data source for remote snapshots and future mutation contracts.
+- MockWebServer tests for remote auth, bearer/refresh, errors, and jobs contracts.
 - Existing UI flow: Bootstrap, Login, Interventions, Detail, Execution, Notes, Photos, Completion, Sync, Settings, Logout.
 
-## Simulated Or Not Implemented
+## Simulated Or Deferred
 
-- Credential verification is local demo only.
-- Access and refresh tokens are synthetic local demo tokens.
-- The offline toggle is a UI simulation, not a system network detector.
-- Remote authentication is not implemented.
-- Server-issued tokens are not implemented.
-- Token refresh endpoint is not implemented.
-- Remote API is not implemented.
-- Network synchronization is not implemented.
-- WorkManager queue processing is not implemented.
+- No public Tervyn backend is bundled or claimed.
+- Remote mode is disabled by default.
+- Default remote base URL is `https://tervyn.invalid/`.
+- The local demo login remains the default runnable mode.
+- Remote job snapshots are not yet merged into Room.
+- Background synchronization is not implemented.
+- WorkManager sync is not implemented.
+- Persistent outbox execution is not implemented.
+- Automatic pull/merge is not implemented.
 - Remote photo upload is not implemented.
-- Server conflict resolution is not implemented.
+- Conflict resolution is not implemented.
 - CameraX capture is not implemented.
+- The offline toggle is a UI simulation, not a system network detector.
+
+## Remote Configuration
+
+Default values:
+
+```text
+TERVYN_REMOTE_API_ENABLED=false
+TERVYN_API_BASE_URL=https://tervyn.invalid/
+```
+
+When remote mode is enabled, the production base URL must be valid, use HTTPS, include a host, and end with `/`.
 
 ## Local Data Layer
 
@@ -63,16 +82,6 @@ The current app keeps the validated Compose front-end, Room local data layer, an
 - Schema export: `app/schemas/`.
 - Destructive migrations are not enabled.
 - The operational database, secure session storage, and preferences DataStore are excluded from backup rules. `allowBackup` is disabled.
-
-## Session Security
-
-- Secure session storage uses an Android Keystore AES/GCM key with alias `tervyn.session.aes.v2`.
-- The encrypted app-private AtomicFile envelope contains the local demo session record: `userId`, synthetic opaque tokens, issue time, access expiry, refresh/session expiry, and schema version.
-- Session writes and clears are committed atomically. Logout writes a durable `EMPTY` tombstone instead of deleting the file as the primary clear mechanism.
-- Upgrading from v0.4.1 invalidates the previous local demo session once; the user reconnects through the local demo login flow.
-- Passwords are never persisted.
-- Session persistence is real, but the credential source remains local demo-only until the remote API phase.
-- See `docs/SECURITY.md` for the Phase 3 threat scope and limitations.
 
 ## Build
 
@@ -101,6 +110,13 @@ If a device or emulator is available:
 ```bash
 ./gradlew connectedDebugAndroidTest
 ```
+
+## Documentation
+
+- `docs/ARCHITECTURE.md`
+- `docs/SECURITY.md`
+- `docs/REMOTE_API.md`
+- `docs/api/tervyn-api-v1.yaml`
 
 ## License
 
