@@ -8,13 +8,17 @@ import dev.amenokizele.tervyn.data.auth.local.LocalUserDataSource
 import dev.amenokizele.tervyn.data.auth.repository.PersistentAuthRepository
 import dev.amenokizele.tervyn.data.auth.session.SecureSessionStore
 import dev.amenokizele.tervyn.data.auth.session.StoredSession
+import dev.amenokizele.tervyn.data.remote.auth.LocalAuthGatewayAdapter
+import dev.amenokizele.tervyn.data.remote.auth.SecureSessionCoordinator
 import dev.amenokizele.tervyn.domain.model.AuthState
 import dev.amenokizele.tervyn.domain.model.User
 import java.time.Instant
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -523,12 +527,16 @@ class PersistentAuthRepositoryTest {
         userDataSource: LocalUserDataSource = FakeLocalUserDataSource(mapOf("user-amina" to user())),
         clock: FakeTervynClock = FakeTervynClock(now)
     ) = PersistentAuthRepository(
-        secureSessionStore = sessionStore,
-        demoAuthGateway = demoAuthGateway,
+        sessionCoordinator = SecureSessionCoordinator(sessionStore),
+        authGateway = LocalAuthGatewayAdapter(
+            demoAuthGateway = demoAuthGateway,
+            userDataSource = userDataSource,
+            clock = clock,
+            ioDispatcher = StandardTestDispatcher(testScheduler)
+        ),
         userDataSource = userDataSource,
         clock = clock,
-        applicationScope = this,
-        ioDispatcher = StandardTestDispatcher(testScheduler)
+        applicationScope = CoroutineScope(SupervisorJob() + StandardTestDispatcher(testScheduler))
     )
 
     private fun validSession(
@@ -607,5 +615,7 @@ class PersistentAuthRepositoryTest {
         private val users: Map<String, User>
     ) : LocalUserDataSource {
         override suspend fun getUser(userId: String): User? = users[userId]
+
+        override suspend fun upsertUser(user: User): AppResult<Unit> = AppResult.Success(Unit)
     }
 }
