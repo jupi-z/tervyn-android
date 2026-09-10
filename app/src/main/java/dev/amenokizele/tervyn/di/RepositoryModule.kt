@@ -14,6 +14,12 @@ import dev.amenokizele.tervyn.data.local.repository.RoomJobRepository
 import dev.amenokizele.tervyn.data.local.repository.RoomSyncRepository
 import dev.amenokizele.tervyn.data.local.seed.RoomDatabaseSeeder
 import dev.amenokizele.tervyn.data.preferences.DataStoreUserPreferencesRepository
+import dev.amenokizele.tervyn.data.remote.auth.AuthGateway
+import dev.amenokizele.tervyn.data.remote.auth.ConfiguredAuthGateway
+import dev.amenokizele.tervyn.data.remote.auth.SecureSessionCoordinator
+import dev.amenokizele.tervyn.data.remote.auth.SessionCoordinator
+import dev.amenokizele.tervyn.data.remote.job.RemoteJobDataSource
+import dev.amenokizele.tervyn.data.remote.job.RetrofitRemoteJobDataSource
 import dev.amenokizele.tervyn.domain.repository.AuthRepository
 import dev.amenokizele.tervyn.domain.repository.JobRepository
 import dev.amenokizele.tervyn.domain.repository.SyncRepository
@@ -46,6 +52,18 @@ abstract class RepositoryModule {
     @Binds
     @Singleton
     abstract fun bindSecureSessionStore(store: AndroidKeystoreSessionStore): SecureSessionStore
+
+    @Binds
+    @Singleton
+    abstract fun bindSessionCoordinator(coordinator: SecureSessionCoordinator): SessionCoordinator
+
+    @Binds
+    @Singleton
+    abstract fun bindAuthGateway(gateway: ConfiguredAuthGateway): AuthGateway
+
+    @Binds
+    @Singleton
+    abstract fun bindRemoteJobDataSource(dataSource: RetrofitRemoteJobDataSource): RemoteJobDataSource
 
     @Binds
     @Singleton

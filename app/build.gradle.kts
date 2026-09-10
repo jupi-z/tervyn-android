@@ -1,9 +1,21 @@
 plugins {
   alias(libs.plugins.android.application)
   alias(libs.plugins.kotlin.compose)
+  alias(libs.plugins.kotlin.serialization)
   alias(libs.plugins.hilt.android)
   alias(libs.plugins.ksp)
 }
+
+val remoteApiEnabledProvider = providers.gradleProperty("TERVYN_REMOTE_API_ENABLED")
+  .orElse(providers.environmentVariable("TERVYN_REMOTE_API_ENABLED"))
+  .orElse("false")
+
+val remoteApiBaseUrlProvider = providers.gradleProperty("TERVYN_API_BASE_URL")
+  .orElse(providers.environmentVariable("TERVYN_API_BASE_URL"))
+  .orElse("https://tervyn.invalid/")
+
+fun String.asBuildConfigStringLiteral(): String =
+  "\"" + replace("\\", "\\\\").replace("\"", "\\\"") + "\""
 
 android {
   namespace = "dev.amenokizele.tervyn"
@@ -17,6 +29,16 @@ android {
     versionName = "1.0"
 
     testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+    buildConfigField(
+      "boolean",
+      "TERVYN_REMOTE_API_ENABLED",
+      remoteApiEnabledProvider.map { it.toBooleanStrictOrNull() ?: false }.get().toString()
+    )
+    buildConfigField(
+      "String",
+      "TERVYN_API_BASE_URL",
+      remoteApiBaseUrlProvider.get().asBuildConfigStringLiteral()
+    )
   }
 
   buildTypes {
@@ -83,6 +105,11 @@ dependencies {
   implementation(libs.androidx.room.runtime)
   implementation(libs.androidx.room.ktx)
   implementation(libs.androidx.datastore.preferences)
+  implementation(libs.kotlinx.serialization.json)
+  implementation(libs.retrofit.core)
+  implementation(libs.retrofit.kotlinx.serialization)
+  implementation(libs.okhttp.core)
+  implementation(libs.okhttp.logging.interceptor)
 
   debugImplementation(libs.androidx.compose.ui.tooling)
   debugImplementation(libs.androidx.compose.ui.test.manifest)
@@ -93,6 +120,7 @@ dependencies {
 
   testImplementation(libs.junit)
   testImplementation(libs.kotlinx.coroutines.test)
+  testImplementation(libs.okhttp.mockwebserver)
 
   androidTestImplementation(libs.junit)
   androidTestImplementation(libs.kotlinx.coroutines.test)

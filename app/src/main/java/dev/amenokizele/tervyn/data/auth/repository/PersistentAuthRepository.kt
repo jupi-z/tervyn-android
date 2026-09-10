@@ -3,22 +3,19 @@ package dev.amenokizele.tervyn.data.auth.repository
 import dev.amenokizele.tervyn.core.result.AppError
 import dev.amenokizele.tervyn.core.result.AppResult
 import dev.amenokizele.tervyn.core.time.TervynClock
-import dev.amenokizele.tervyn.data.auth.demo.DemoAuthGateway
 import dev.amenokizele.tervyn.data.auth.local.LocalUserDataSource
-import dev.amenokizele.tervyn.data.auth.session.SecureSessionStore
 import dev.amenokizele.tervyn.data.auth.session.StoredSession
+import dev.amenokizele.tervyn.data.remote.auth.AuthGateway
+import dev.amenokizele.tervyn.data.remote.auth.SessionCoordinator
+import dev.amenokizele.tervyn.data.remote.auth.SessionState
 import dev.amenokizele.tervyn.di.ApplicationScope
-import dev.amenokizele.tervyn.di.IoDispatcher
 import dev.amenokizele.tervyn.domain.model.AuthState
 import dev.amenokizele.tervyn.domain.model.User
 import dev.amenokizele.tervyn.domain.repository.AuthRepository
-import java.security.SecureRandom
 import java.time.Instant
-import java.util.Base64
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.currentCoroutineContext
@@ -33,22 +30,35 @@ import kotlinx.coroutines.withContext
 
 @Singleton
 class PersistentAuthRepository @Inject constructor(
-    private val secureSessionStore: SecureSessionStore,
-    private val demoAuthGateway: DemoAuthGateway,
+    private val sessionCoordinator: SessionCoordinator,
+    private val authGateway: AuthGateway,
     private val userDataSource: LocalUserDataSource,
     private val clock: TervynClock,
-    @ApplicationScope applicationScope: CoroutineScope,
-    @param:IoDispatcher private val ioDispatcher: CoroutineDispatcher
+    @ApplicationScope applicationScope: CoroutineScope
 ) : AuthRepository {
     private val _authState = MutableStateFlow<AuthState>(AuthState.Checking)
     override val authState: Flow<AuthState> = _authState.asStateFlow()
 
-    private var restoredSession: StoredSession? = null
     private val sessionMutex = Mutex()
 
     private val restoration = applicationScope.launch {
         sessionMutex.withLock {
             restoreSession()
+        }
+    }
+
+    init {
+        applicationScope.launch {
+            restoration.join()
+            observeSessionInvalidation()
+        }
+    }
+
+    private suspend fun observeSessionInvalidation() {
+        sessionCoordinator.state.collect { state ->
+            if (state is SessionState.Empty && _authState.value is AuthState.Authenticated) {
+                _authState.value = AuthState.Unauthenticated
+            }
         }
     }
 
@@ -58,7 +68,7 @@ class PersistentAuthRepository @Inject constructor(
     }
 
     private suspend fun currentAuthenticatedUserLocked(): User? {
-        val session = restoredSession ?: return null
+        val session = sessionCoordinator.snapshot() ?: return null
         if (isSessionExpired(session, clock.now())) {
             invalidateSession()
             return null
@@ -74,10 +84,10 @@ class PersistentAuthRepository @Inject constructor(
     override suspend fun login(email: String, password: String): AppResult<User> {
         restoration.join()
         return sessionMutex.withLock {
-            when (val authResult = demoAuthGateway.authenticate(email, password)) {
+            when (val authResult = authGateway.login(email, password)) {
                 is AppResult.Failure -> AppResult.Failure(authResult.error)
 
-                is AppResult.Success -> loginAuthenticatedDemoUser(authResult.data.userId)
+                is AppResult.Success -> loginAuthenticatedUser(authResult.data.user, authResult.data.session)
             }
         }
     }
@@ -86,10 +96,19 @@ class PersistentAuthRepository @Inject constructor(
         restoration.join()
         return sessionMutex.withLock {
             currentCoroutineContext().ensureActive()
+            val session = sessionCoordinator.snapshot()
+            if (session != null) {
+                try {
+                    authGateway.revoke(session)
+                } catch (exception: CancellationException) {
+                    throw exception
+                } catch (_: Exception) {
+                    // Remote revocation is best-effort; local token clearing is authoritative.
+                }
+            }
             val result = withContext(NonCancellable) {
-                when (val clearResult = secureSessionStore.clear()) {
+                when (val clearResult = sessionCoordinator.clear()) {
                     is AppResult.Success -> {
-                        restoredSession = null
                         _authState.value = AuthState.Unauthenticated
                         AppResult.Success(Unit)
                     }
@@ -102,17 +121,16 @@ class PersistentAuthRepository @Inject constructor(
         }
     }
 
-    private suspend fun loginAuthenticatedDemoUser(userId: String): AppResult<User> {
-        val user = userDataSource.getUser(userId)
-            ?: return AppResult.Failure(AppError.Authentication("local_user_missing"))
-        val session = createDemoSession(user.id, clock.now())
-
+    private suspend fun loginAuthenticatedUser(user: User, session: StoredSession): AppResult<User> {
         currentCoroutineContext().ensureActive()
         // Once persistence starts, publish its result before honoring caller cancellation.
         val result = withContext(NonCancellable) {
-            when (val writeResult = secureSessionStore.write(session)) {
+            when (val upsert = userDataSource.upsertUser(user)) {
+                is AppResult.Failure -> return@withContext AppResult.Failure(upsert.error)
+                is AppResult.Success -> Unit
+            }
+            when (val writeResult = sessionCoordinator.replace(session)) {
                 is AppResult.Success -> {
-                    restoredSession = session
                     _authState.value = AuthState.Authenticated(user)
                     AppResult.Success(user)
                 }
@@ -126,7 +144,7 @@ class PersistentAuthRepository @Inject constructor(
 
     private suspend fun restoreSession() {
         try {
-            when (val readResult = secureSessionStore.read()) {
+            when (val readResult = sessionCoordinator.restore()) {
                 is AppResult.Success -> restoreSession(readResult.data)
                 is AppResult.Failure -> {
                     invalidateSession()
@@ -155,15 +173,13 @@ class PersistentAuthRepository @Inject constructor(
             return
         }
 
-        restoredSession = session
         _authState.value = AuthState.Authenticated(user)
     }
 
     private suspend fun invalidateSession() {
         currentCoroutineContext().ensureActive()
         withContext(NonCancellable) {
-            secureSessionStore.clear()
-            restoredSession = null
+            sessionCoordinator.clear()
             _authState.value = AuthState.Unauthenticated
         }
         currentCoroutineContext().ensureActive()
@@ -171,29 +187,5 @@ class PersistentAuthRepository @Inject constructor(
 
     private fun isSessionExpired(session: StoredSession, now: Instant): Boolean {
         return !session.refreshTokenExpiresAt.isAfter(now)
-    }
-
-    private suspend fun createDemoSession(userId: String, issuedAt: Instant): StoredSession = withContext(ioDispatcher) {
-        StoredSession(
-            userId = userId,
-            accessToken = "local_demo_access_${randomToken()}",
-            refreshToken = "local_demo_refresh_${randomToken()}",
-            issuedAt = issuedAt,
-            accessTokenExpiresAt = issuedAt.plusSeconds(ACCESS_TOKEN_TTL_SECONDS),
-            refreshTokenExpiresAt = issuedAt.plusSeconds(REFRESH_TOKEN_TTL_SECONDS),
-            schemaVersion = StoredSession.SCHEMA_VERSION
-        )
-    }
-
-    private fun randomToken(): String {
-        val bytes = ByteArray(32)
-        secureRandom.nextBytes(bytes)
-        return Base64.getUrlEncoder().withoutPadding().encodeToString(bytes)
-    }
-
-    companion object {
-        private const val ACCESS_TOKEN_TTL_SECONDS = 15 * 60L
-        private const val REFRESH_TOKEN_TTL_SECONDS = 7 * 24 * 60 * 60L
-        private val secureRandom = SecureRandom()
     }
 }
