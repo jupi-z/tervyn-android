@@ -26,9 +26,11 @@ class RemoteAuthGatewayTest {
         server = MockWebServer()
         server.start()
         val config = RemoteApiConfig(enabled = true, baseUrl = server.url("/").toString(), allowHttpForTests = true)
+        val publicRetrofit = RemoteApiFactory.createPublicRetrofit(config, RemoteJson.json)
         gateway = RemoteAuthGateway(
-            publicAuthApi = RemoteApiFactory.createPublicRetrofit(config, RemoteJson.json).create(PublicAuthApi::class.java),
-            authenticatedAuthApi = RemoteApiFactory.createPublicRetrofit(config, RemoteJson.json).create(AuthenticatedAuthApi::class.java),
+            publicAuthApi = publicRetrofit.create(PublicAuthApi::class.java),
+            revocationAuthApi = publicRetrofit.create(RevocationAuthApi::class.java),
+            authenticatedAuthApi = publicRetrofit.create(AuthenticatedAuthApi::class.java),
             errorMapper = RemoteErrorMapper(RemoteJson.json)
         )
     }
@@ -99,13 +101,19 @@ class RemoteAuthGatewayTest {
             refreshTokenExpiresAt = Instant.parse("2026-09-16T10:00:00Z")
         )
         val config = RemoteApiConfig(enabled = true, baseUrl = server.url("/").toString(), allowHttpForTests = true)
-        val publicApi = RemoteApiFactory.createPublicRetrofit(config, RemoteJson.json).create(PublicAuthApi::class.java)
+        val publicRetrofit = RemoteApiFactory.createPublicRetrofit(config, RemoteJson.json)
+        val publicApi = publicRetrofit.create(PublicAuthApi::class.java)
         val authenticatedClient = OkHttpClient.Builder()
             .addInterceptor(BearerTokenInterceptor(FakeSessionCoordinator(session)))
             .build()
         val authenticatedApi = RemoteApiFactory.createRetrofit(config, RemoteJson.json, authenticatedClient)
             .create(AuthenticatedAuthApi::class.java)
-        val gateway = RemoteAuthGateway(publicApi, authenticatedApi, RemoteErrorMapper(RemoteJson.json))
+        val gateway = RemoteAuthGateway(
+            publicApi,
+            publicRetrofit.create(RevocationAuthApi::class.java),
+            authenticatedApi,
+            RemoteErrorMapper(RemoteJson.json)
+        )
         server.enqueue(MockResponse().setResponseCode(204))
 
         assertEquals(AppResult.Success(Unit), gateway.revoke(session))
@@ -115,6 +123,51 @@ class RemoteAuthGatewayTest {
         assertEquals("/v1/auth/logout", request.path)
         assertEquals("Bearer logout-access-token", request.getHeader("Authorization"))
         assertEquals("""{"refreshToken":"logout-refresh-token"}""", request.body.readUtf8())
+    }
+
+    @Test
+    fun revoke401DoesNotTriggerRefreshRequest() = runTest {
+        val session = StoredSession(
+            userId = "user-remote",
+            accessToken = "access-A",
+            refreshToken = "refresh-A",
+            issuedAt = Instant.parse("2026-09-09T10:00:00Z"),
+            accessTokenExpiresAt = Instant.parse("2026-09-09T10:15:00Z"),
+            refreshTokenExpiresAt = Instant.parse("2026-09-16T10:00:00Z")
+        )
+        val config = RemoteApiConfig(enabled = true, baseUrl = server.url("/").toString(), allowHttpForTests = true)
+        val publicRetrofit = RemoteApiFactory.createPublicRetrofit(config, RemoteJson.json)
+        val publicApi = publicRetrofit.create(PublicAuthApi::class.java)
+        val coordinator = FakeSessionCoordinator(session)
+        val authenticatedClient = OkHttpClient.Builder()
+            .addInterceptor(BearerTokenInterceptor(coordinator))
+            .authenticator(
+                SessionRefreshAuthenticator(
+                    sessionCoordinator = coordinator,
+                    tokenRefresher = RemoteTokenRefresher(publicApi, RemoteErrorMapper(RemoteJson.json)),
+                    now = { Instant.parse("2026-09-09T10:00:00Z") }
+                )
+            )
+            .build()
+        val authenticatedApi = RemoteApiFactory.createRetrofit(config, RemoteJson.json, authenticatedClient)
+            .create(AuthenticatedAuthApi::class.java)
+        val gateway = RemoteAuthGateway(
+            publicApi,
+            publicRetrofit.create(RevocationAuthApi::class.java),
+            authenticatedApi,
+            RemoteErrorMapper(RemoteJson.json)
+        )
+        server.enqueue(MockResponse().setResponseCode(401).setBody("""{"error":{"code":"unauthorized"}}"""))
+        server.enqueue(MockResponse().setResponseCode(200).setBody(refreshResponse()))
+
+        val result = gateway.revoke(session)
+
+        assertEquals(AppResult.Failure(AppError.Authentication("unauthorized")), result)
+        assertEquals(1, server.requestCount)
+        val request = server.takeRequest()
+        assertEquals("/v1/auth/logout", request.path)
+        assertEquals("Bearer access-A", request.getHeader("Authorization"))
+        assertEquals("""{"refreshToken":"refresh-A"}""", request.body.readUtf8())
     }
 
     @Test
@@ -143,6 +196,16 @@ class RemoteAuthGatewayTest {
             "accessTokenExpiresAt": "2026-09-09T10:15:00Z",
             "refreshTokenExpiresAt": "2026-09-16T10:00:00Z"
           }
+        }
+    """.trimIndent()
+
+    private fun refreshResponse() = """
+        {
+          "accessToken": "access-B",
+          "refreshToken": "refresh-B",
+          "issuedAt": "2026-09-09T10:01:00Z",
+          "accessTokenExpiresAt": "2026-09-09T10:16:00Z",
+          "refreshTokenExpiresAt": "2026-09-16T10:01:00Z"
         }
     """.trimIndent()
 }

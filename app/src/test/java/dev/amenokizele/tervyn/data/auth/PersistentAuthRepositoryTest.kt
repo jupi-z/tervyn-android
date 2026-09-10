@@ -10,6 +10,8 @@ import dev.amenokizele.tervyn.data.auth.session.SecureSessionStore
 import dev.amenokizele.tervyn.data.auth.session.StoredSession
 import dev.amenokizele.tervyn.data.remote.auth.LocalAuthGatewayAdapter
 import dev.amenokizele.tervyn.data.remote.auth.SecureSessionCoordinator
+import dev.amenokizele.tervyn.data.remote.auth.AuthGateway
+import dev.amenokizele.tervyn.data.remote.auth.AuthGatewayResult
 import dev.amenokizele.tervyn.domain.model.AuthState
 import dev.amenokizele.tervyn.domain.model.User
 import java.time.Instant
@@ -219,6 +221,83 @@ class PersistentAuthRepositoryTest {
         val result = repository.logout()
 
         assertTrue(result is AppResult.Failure)
+        assertEquals(AuthState.Authenticated(user), repository.authState.first())
+    }
+
+    @Test
+    fun logoutRemoteRevokeFailureStillClearsLocalSessionAndUnauthenticates() = runTest {
+        val user = user()
+        val sessionStore = FakeSecureSessionStore(readResult = AppResult.Success(validSession()))
+        val authGateway = FakeAuthGateway(revokeResult = AppResult.Failure(AppError.Network("server_error")))
+        val repository = repository(
+            sessionStore = sessionStore,
+            userDataSource = FakeLocalUserDataSource(mapOf(user.id to user)),
+            authGateway = authGateway
+        )
+        advanceUntilIdle()
+
+        val result = repository.logout()
+
+        assertEquals(AppResult.Success(Unit), result)
+        assertEquals(1, authGateway.revokeCalls)
+        assertEquals(1, sessionStore.clearCalls)
+        assertEquals(null, sessionStore.storedSession)
+        assertEquals(AuthState.Unauthenticated, repository.authState.first())
+    }
+
+    @Test
+    fun cancellationDuringRemoteRevokeStillClearsLocalSessionBeforeRethrowing() = runTest {
+        val user = user()
+        val sessionStore = FakeSecureSessionStore(readResult = AppResult.Success(validSession()))
+        val revokeEntered = CompletableDeferred<Unit>()
+        val neverComplete = CompletableDeferred<Unit>()
+        val authGateway = FakeAuthGateway(
+            onRevoke = {
+                revokeEntered.complete(Unit)
+                neverComplete.await()
+            }
+        )
+        val repository = repository(
+            sessionStore = sessionStore,
+            userDataSource = FakeLocalUserDataSource(mapOf(user.id to user)),
+            authGateway = authGateway
+        )
+        advanceUntilIdle()
+
+        val logout = async { repository.logout() }
+        revokeEntered.await()
+        logout.cancel()
+        advanceUntilIdle()
+
+        assertTrue(logout.isCancelled)
+        assertEquals(1, authGateway.revokeCalls)
+        assertEquals(1, sessionStore.clearCalls)
+        assertEquals(null, sessionStore.storedSession)
+        assertEquals(AuthState.Unauthenticated, repository.authState.first())
+    }
+
+    @Test
+    fun logoutLocalClearFailureAfterRemoteRevokeFailurePreservesAuthenticatedState() = runTest {
+        val user = user()
+        val session = validSession()
+        val sessionStore = FakeSecureSessionStore(
+            readResult = AppResult.Success(session),
+            clearResult = AppResult.Failure(AppError.Storage("secure_session_clear_failed"))
+        )
+        val authGateway = FakeAuthGateway(revokeResult = AppResult.Failure(AppError.Network("server_error")))
+        val repository = repository(
+            sessionStore = sessionStore,
+            userDataSource = FakeLocalUserDataSource(mapOf(user.id to user)),
+            authGateway = authGateway
+        )
+        advanceUntilIdle()
+
+        val result = repository.logout()
+
+        assertEquals(AppResult.Failure(AppError.Storage("secure_session_clear_failed")), result)
+        assertEquals(1, authGateway.revokeCalls)
+        assertEquals(1, sessionStore.clearCalls)
+        assertEquals(session, sessionStore.storedSession)
         assertEquals(AuthState.Authenticated(user), repository.authState.first())
     }
 
@@ -524,11 +603,12 @@ class PersistentAuthRepositoryTest {
         demoAuthGateway: DemoAuthGateway = FakeDemoAuthGateway(
             AppResult.Success(DemoAuthGateway.AuthenticatedDemoUser("user-amina"))
         ),
+        authGateway: AuthGateway? = null,
         userDataSource: LocalUserDataSource = FakeLocalUserDataSource(mapOf("user-amina" to user())),
         clock: FakeTervynClock = FakeTervynClock(now)
     ) = PersistentAuthRepository(
         sessionCoordinator = SecureSessionCoordinator(sessionStore),
-        authGateway = LocalAuthGatewayAdapter(
+        authGateway = authGateway ?: LocalAuthGatewayAdapter(
             demoAuthGateway = demoAuthGateway,
             userDataSource = userDataSource,
             clock = clock,
@@ -609,6 +689,23 @@ class PersistentAuthRepositoryTest {
             email: String,
             password: String
         ): AppResult<DemoAuthGateway.AuthenticatedDemoUser> = result
+    }
+
+    private class FakeAuthGateway(
+        private val loginResult: AppResult<AuthGatewayResult> = AppResult.Failure(AppError.Authentication("unused_login")),
+        private val revokeResult: AppResult<Unit> = AppResult.Success(Unit),
+        private val onRevoke: suspend () -> Unit = {}
+    ) : AuthGateway {
+        var revokeCalls = 0
+            private set
+
+        override suspend fun login(email: String, password: String): AppResult<AuthGatewayResult> = loginResult
+
+        override suspend fun revoke(session: StoredSession): AppResult<Unit> {
+            revokeCalls += 1
+            onRevoke()
+            return revokeResult
+        }
     }
 
     private class FakeLocalUserDataSource(

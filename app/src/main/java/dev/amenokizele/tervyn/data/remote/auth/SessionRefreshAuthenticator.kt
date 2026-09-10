@@ -53,9 +53,7 @@ class SessionRefreshAuthenticator(
 
     private fun clearInvalidSession() {
         runBlocking {
-            if (sessionCoordinator.clear() is AppResult.Failure) {
-                sessionCoordinator.markEmptyAfterRemoteInvalidation()
-            }
+            sessionCoordinator.clear()
         }
     }
 

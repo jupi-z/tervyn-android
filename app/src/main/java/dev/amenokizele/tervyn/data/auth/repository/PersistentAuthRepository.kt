@@ -97,11 +97,12 @@ class PersistentAuthRepository @Inject constructor(
         return sessionMutex.withLock {
             currentCoroutineContext().ensureActive()
             val session = sessionCoordinator.snapshot()
+            var remoteCancellation: CancellationException? = null
             if (session != null) {
                 try {
                     authGateway.revoke(session)
                 } catch (exception: CancellationException) {
-                    throw exception
+                    remoteCancellation = exception
                 } catch (_: Exception) {
                     // Remote revocation is best-effort; local token clearing is authoritative.
                 }
@@ -116,6 +117,7 @@ class PersistentAuthRepository @Inject constructor(
                     is AppResult.Failure -> AppResult.Failure(clearResult.error)
                 }
             }
+            remoteCancellation?.let { throw it }
             currentCoroutineContext().ensureActive()
             result
         }
@@ -180,8 +182,9 @@ class PersistentAuthRepository @Inject constructor(
         currentCoroutineContext().ensureActive()
         withContext(NonCancellable) {
             sessionCoordinator.clear()
-            _authState.value = AuthState.Unauthenticated
         }
+        // Deterministic local invalidation prevents UI use even if durable cleanup reports a rare failure.
+        _authState.value = AuthState.Unauthenticated
         currentCoroutineContext().ensureActive()
     }
 

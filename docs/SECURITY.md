@@ -38,7 +38,7 @@ The encrypted payload is stored in `files/secure/tervyn_secure_session_v2.bin` u
 
 `SessionCoordinator` serializes restore, replace, and clear operations with a mutex and exposes a memory snapshot for the HTTP layer. OkHttp interceptors read only the memory snapshot; they do not read the encrypted session file per request.
 
-An `Empty` coordinator state invalidates the authenticated app state so refresh failures can force logout consistently.
+An `Empty` coordinator state is published only after `SecureSessionStore.clear()` succeeds or restore reads a durable empty session. A failed clear preserves the prior in-memory session snapshot instead of pretending a still-durable secret was removed.
 
 ## Remote Authentication
 
@@ -48,13 +48,15 @@ Remote tokens are treated as opaque values. The client does not assume JWT claim
 
 Remote logout is best-effort server revocation. Local session clearing is authoritative for user logout. A remote revoke failure cannot block local logout.
 
+Logout revocation uses the no-authenticator public HTTP transport with an explicit `Authorization` header from the captured session. A logout 401 never triggers token refresh.
+
 ## 401 Refresh Behavior
 
 Protected requests use `SessionRefreshAuthenticator` for 401 responses. It allows one retry, uses a public refresh client, and performs single-flight refresh so concurrent 401 responses share one refresh call.
 
 If another request has already refreshed the token, the authenticator retries with the newer in-memory token without calling refresh again.
 
-Expired or invalid refresh tokens clear the local session. Temporary refresh server/network failures preserve the previous session. If refreshed session persistence fails, the app preserves the old session and does not retry with an unpersisted token.
+Expired or invalid refresh tokens attempt durable local clear. If clear succeeds, the coordinator publishes `Empty`; if clear fails, the coordinator preserves the previous active session snapshot because the encrypted session may still exist on disk. Temporary refresh server/network failures preserve the previous session. If refreshed session persistence fails, the app preserves the old session and does not retry with an unpersisted token.
 
 ## HTTP Logging And Redaction
 

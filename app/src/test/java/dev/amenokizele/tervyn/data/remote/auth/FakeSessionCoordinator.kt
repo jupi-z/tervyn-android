@@ -16,7 +16,6 @@ class FakeSessionCoordinator(initial: StoredSession?) : SessionCoordinator {
     var clearResult: AppResult<Unit> = AppResult.Success(Unit)
     var replaceCalls = 0
     var clearCalls = 0
-    var markEmptyCalls = 0
 
     override suspend fun restore(): AppResult<StoredSession?> = AppResult.Success(current)
 
@@ -36,12 +35,6 @@ class FakeSessionCoordinator(initial: StoredSession?) : SessionCoordinator {
             mutableState.value = SessionState.Empty
         }
         return clearResult
-    }
-
-    override suspend fun markEmptyAfterRemoteInvalidation() {
-        markEmptyCalls += 1
-        current = null
-        mutableState.value = SessionState.Empty
     }
 
     override fun snapshot(): StoredSession? = current

@@ -44,6 +44,7 @@ The current app keeps Room as the UI source of truth and adds a real Retrofit/Ok
 - Remote auth client for login, refresh, logout, and me endpoints.
 - Bearer token injection from in-memory session state.
 - Single-flight 401 refresh with one retry maximum.
+- Logout never refreshes credentials, and `SessionCoordinator` publishes `Empty` only after durable clear success.
 - Remote job data source for remote snapshots and future mutation contracts.
 - MockWebServer tests for remote auth, bearer/refresh, errors, and jobs contracts.
 - Existing UI flow: Bootstrap, Login, Interventions, Detail, Execution, Notes, Photos, Completion, Sync, Settings, Logout.

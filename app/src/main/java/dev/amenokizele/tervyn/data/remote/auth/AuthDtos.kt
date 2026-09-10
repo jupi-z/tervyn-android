@@ -5,6 +5,7 @@ import retrofit2.Call
 import retrofit2.Response
 import retrofit2.http.Body
 import retrofit2.http.GET
+import retrofit2.http.Header
 import retrofit2.http.POST
 
 interface PublicAuthApi {
@@ -16,11 +17,16 @@ interface PublicAuthApi {
 }
 
 interface AuthenticatedAuthApi {
-    @POST("/v1/auth/logout")
-    suspend fun logout(@Body request: LogoutRequestDto): Response<Unit>
-
     @GET("/v1/me")
     suspend fun me(): Response<UserDto>
+}
+
+interface RevocationAuthApi {
+    @POST("/v1/auth/logout")
+    suspend fun logout(
+        @Header("Authorization") authorization: String,
+        @Body request: LogoutRequestDto
+    ): Response<Unit>
 }
 
 @Serializable

@@ -90,6 +90,8 @@ Login UI
 
 The public client is used for login and refresh. It has safe headers and no bearer interceptor or authenticator.
 
+Remote logout revocation also uses the public/no-authenticator transport with an explicit `Authorization` header captured from the session being revoked. Logout never triggers token refresh.
+
 The authenticated client is used for protected endpoints. It has safe headers, bearer injection, and `SessionRefreshAuthenticator`.
 
 Timeouts:
@@ -109,7 +111,9 @@ HTTP logging is `BASIC` in debug and `NONE` in release. Authorization is redacte
 - single-flight refresh under a process-local lock;
 - reuse when another request has already refreshed the token;
 - public refresh client to avoid auth loops;
-- refresh-token expiry or invalid refresh clearing local session;
+- refresh-token expiry or invalid refresh attempting durable local clear;
+- `SessionState.Empty` published only after durable clear success or restore reading no session;
+- clear failure preserving the previous active session snapshot;
 - temporary server/network refresh failure preserving the old session;
 - persistence failure preserving the old session and refusing to retry with an unpersisted token.
 

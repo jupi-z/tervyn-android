@@ -30,6 +30,7 @@ Public client:
 
 - login;
 - refresh;
+- logout revocation with an explicit captured `Authorization` header;
 - safe headers;
 - no bearer token interceptor;
 - no authenticator.
@@ -60,8 +61,12 @@ Remote login calls `POST /v1/auth/login`, maps DTOs into data/domain models, ups
 - reusing an already-refreshed in-memory token when available;
 - refreshing once for concurrent 401 responses;
 - persisting the full rotated session before retrying;
-- clearing the local session for expired or invalid refresh tokens;
+- attempting durable local clear for expired or invalid refresh tokens;
+- publishing `SessionState.Empty` only when durable clear succeeds;
+- preserving the previous active session snapshot if durable clear fails;
 - preserving the previous session for temporary network/server refresh failures or persistence failures.
+
+Remote logout never refreshes credentials. `/v1/auth/logout` uses the no-authenticator public client and sends the access token and refresh token from the same captured `StoredSession`. A logout 401 is mapped as a revoke failure and local secure clear remains authoritative for user logout.
 
 ## Error Mapping
 

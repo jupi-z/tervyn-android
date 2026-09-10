@@ -60,8 +60,10 @@ class ConfiguredAuthGatewayTest {
 
     private fun configuredGateway(enabled: Boolean): ConfiguredAuthGateway {
         val config = RemoteApiConfig(enabled = enabled, baseUrl = server.url("/").toString(), allowHttpForTests = true)
-        val publicAuthApi = RemoteApiFactory.createPublicRetrofit(config, RemoteJson.json).create(PublicAuthApi::class.java)
-        val authenticatedAuthApi = RemoteApiFactory.createPublicRetrofit(config, RemoteJson.json).create(AuthenticatedAuthApi::class.java)
+        val publicRetrofit = RemoteApiFactory.createPublicRetrofit(config, RemoteJson.json)
+        val publicAuthApi = publicRetrofit.create(PublicAuthApi::class.java)
+        val revocationAuthApi = publicRetrofit.create(RevocationAuthApi::class.java)
+        val authenticatedAuthApi = publicRetrofit.create(AuthenticatedAuthApi::class.java)
         val users = FakeLocalUserDataSource(mapOf("user-amina" to user()))
         return ConfiguredAuthGateway(
             config = config,
@@ -71,7 +73,12 @@ class ConfiguredAuthGatewayTest {
                 clock = FakeTervynClock(now),
                 ioDispatcher = UnconfinedTestDispatcher()
             ),
-            remoteGateway = RemoteAuthGateway(publicAuthApi, authenticatedAuthApi, RemoteErrorMapper(RemoteJson.json))
+            remoteGateway = RemoteAuthGateway(
+                publicAuthApi,
+                revocationAuthApi,
+                authenticatedAuthApi,
+                RemoteErrorMapper(RemoteJson.json)
+            )
         )
     }
 

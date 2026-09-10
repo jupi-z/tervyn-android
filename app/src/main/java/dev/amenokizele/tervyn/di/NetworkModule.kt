@@ -8,6 +8,7 @@ import dev.amenokizele.tervyn.BuildConfig
 import dev.amenokizele.tervyn.data.remote.auth.AuthenticatedAuthApi
 import dev.amenokizele.tervyn.data.remote.auth.BearerTokenInterceptor
 import dev.amenokizele.tervyn.data.remote.auth.PublicAuthApi
+import dev.amenokizele.tervyn.data.remote.auth.RevocationAuthApi
 import dev.amenokizele.tervyn.data.remote.auth.RemoteTokenRefresher
 import dev.amenokizele.tervyn.data.remote.auth.SafeHeadersInterceptor
 import dev.amenokizele.tervyn.data.remote.auth.SessionCoordinator
@@ -160,6 +161,12 @@ object NetworkModule {
     @Singleton
     fun provideAuthenticatedAuthApi(@AuthenticatedRetrofit retrofit: Retrofit): AuthenticatedAuthApi {
         return retrofit.create(AuthenticatedAuthApi::class.java)
+    }
+
+    @Provides
+    @Singleton
+    fun provideRevocationAuthApi(@PublicRetrofit retrofit: Retrofit): RevocationAuthApi {
+        return retrofit.create(RevocationAuthApi::class.java)
     }
 
     @Provides

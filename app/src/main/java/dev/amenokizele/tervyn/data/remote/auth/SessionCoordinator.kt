@@ -26,8 +26,6 @@ interface SessionCoordinator {
 
     suspend fun clear(): AppResult<Unit>
 
-    suspend fun markEmptyAfterRemoteInvalidation()
-
     fun snapshot(): StoredSession?
 }
 
@@ -46,10 +44,7 @@ class SecureSessionCoordinator @Inject constructor(
                 result
             }
 
-            is AppResult.Failure -> {
-                mutableState.value = SessionState.Empty
-                result
-            }
+            is AppResult.Failure -> result
         }
     }
 
@@ -73,10 +68,6 @@ class SecureSessionCoordinator @Inject constructor(
 
             is AppResult.Failure -> result
         }
-    }
-
-    override suspend fun markEmptyAfterRemoteInvalidation() = mutex.withLock {
-        mutableState.value = SessionState.Empty
     }
 
     override fun snapshot(): StoredSession? {

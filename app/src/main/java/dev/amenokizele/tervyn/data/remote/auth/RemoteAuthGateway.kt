@@ -11,6 +11,7 @@ import kotlinx.serialization.SerializationException
 
 class RemoteAuthGateway @Inject constructor(
     private val publicAuthApi: PublicAuthApi,
+    private val revocationAuthApi: RevocationAuthApi,
     private val authenticatedAuthApi: AuthenticatedAuthApi,
     private val errorMapper: RemoteErrorMapper
 ) : AuthGateway {
@@ -37,7 +38,10 @@ class RemoteAuthGateway @Inject constructor(
 
     override suspend fun revoke(session: StoredSession): AppResult<Unit> {
         return try {
-            val response = authenticatedAuthApi.logout(LogoutRequestDto(session.refreshToken))
+            val response = revocationAuthApi.logout(
+                authorization = "Bearer ${session.accessToken}",
+                request = LogoutRequestDto(session.refreshToken)
+            )
             if (response.isSuccessful) AppResult.Success(Unit) else AppResult.Failure(errorMapper.map(response))
         } catch (exception: CancellationException) {
             throw exception

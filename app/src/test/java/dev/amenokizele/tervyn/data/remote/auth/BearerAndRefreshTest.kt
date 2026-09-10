@@ -115,7 +115,8 @@ class BearerAndRefreshTest {
     }
 
     @Test
-    fun invalidRefreshClearFailureStillMarksSessionEmptyInMemory() {
+    fun invalidRefreshClearFailurePreservesActiveSessionInMemory() {
+        val oldSession = requireNotNull(coordinator.current)
         coordinator.clearResult = AppResult.Failure(AppError.Storage("secure_session_clear_failed"))
         server.enqueue(MockResponse().setResponseCode(401).setBody("""{"error":{"code":"unauthorized"}}"""))
         server.enqueue(MockResponse().setResponseCode(401).setBody("""{"error":{"code":"invalid_refresh_token"}}"""))
@@ -124,18 +125,19 @@ class BearerAndRefreshTest {
             assertEquals(401, response.code)
         }
 
-        assertNull(coordinator.current)
+        assertEquals(oldSession, coordinator.current)
         assertEquals(1, coordinator.clearCalls)
-        assertEquals(1, coordinator.markEmptyCalls)
+        assertEquals(0, coordinator.markEmptyCalls)
     }
 
     @Test
-    fun expiredRefreshClearFailureStillMarksSessionEmptyInMemoryWithoutCallingRefresh() {
-        coordinator.current = session(
+    fun expiredRefreshClearFailurePreservesActiveSessionInMemoryWithoutCallingRefresh() {
+        val oldSession = session(
             accessToken = "token-A",
             refreshToken = "refresh-A",
             refreshTokenExpiresAt = Instant.parse("2026-09-09T09:59:59Z")
         )
+        coordinator.current = oldSession
         coordinator.clearResult = AppResult.Failure(AppError.Storage("secure_session_clear_failed"))
         server.enqueue(MockResponse().setResponseCode(401).setBody("""{"error":{"code":"unauthorized"}}"""))
 
@@ -143,9 +145,9 @@ class BearerAndRefreshTest {
             assertEquals(401, response.code)
         }
 
-        assertNull(coordinator.current)
+        assertEquals(oldSession, coordinator.current)
         assertEquals(1, coordinator.clearCalls)
-        assertEquals(1, coordinator.markEmptyCalls)
+        assertEquals(0, coordinator.markEmptyCalls)
         assertEquals(1, server.requestCount)
     }
 
@@ -252,11 +254,6 @@ class BearerAndRefreshTest {
             clearCalls += 1
             if (clearResult is AppResult.Success) current = null
             return clearResult
-        }
-
-        override suspend fun markEmptyAfterRemoteInvalidation() {
-            markEmptyCalls += 1
-            current = null
         }
 
         override fun snapshot(): StoredSession? {
