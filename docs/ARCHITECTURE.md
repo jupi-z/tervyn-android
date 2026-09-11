@@ -2,9 +2,7 @@
 
 ## Status
 
-Phase 4 implements the remote API and authentication network foundation inside the existing single `:app` module. Room remains the source of truth for UI-observed field data. Remote snapshots are fetched through a separate data source and are not merged into Room in this phase.
-
-No WorkManager queue processor, automatic sync engine, remote photo upload, or server conflict-resolution flow is implemented.
+Phase 5 adds the offline sync engine inside the existing single `:app` module. Room remains the source of truth for UI-observed field data. Remote mode is opt-in and no public Tervyn backend is bundled or claimed.
 
 ## Dependency Rule
 
@@ -47,7 +45,9 @@ The Domain layer remains pure Kotlin and independent from Android UI, Compose, H
 
 `RoomJobRepository` implements `JobRepository` and remains bound as the UI-facing job repository. It reads and writes jobs, checklist items, notes, attachment metadata, and outbox rows through Room. `observeJobs()` and `observeJob(jobId)` are Room Flow queries, so UI state updates after local transactions without remote access.
 
-`RoomSyncRepository` implements `SyncRepository` from persistent outbox counters in `SyncOperationDao`. Phase 4 does not execute the outbox against the network.
+`RoomSyncRepository` implements `SyncRepository` from persistent outbox counters and runtime sync state. `SyncOrchestrator` executes push first, then paginated pull/merge, while a process-local mutex prevents overlapping runs.
+
+`SyncOperationEntity.payloadJson` stores an immutable versioned payload for each mutation. The payload is decoded before execution, and the original `clientMutationId` is reused for retries. Upload operations are durable but excluded from execution until the later attachment-upload phase.
 
 ## Remote API Foundation
 
@@ -62,6 +62,10 @@ RemoteJobDataSource
 ```
 
 `RemoteJobDataSource` returns remote snapshot models and never writes Room. It supports job list/detail fetches and declares mutation contracts for future status, checklist, note, and attachment metadata operations. Mutation calls accept a caller-provided `clientMutationId` for `Idempotency-Key` and stable `If-Match: "<serverVersion>"` headers where required.
+
+`RemotePullSynchronizer` fetches pages using the stored remote watermark, merges each page in one Room transaction, and commits the watermark only after the complete pull succeeds. `RemoteJobMerger` preserves local business fields for entities with pending, processing, or failed local operations while applying remote-owned fields and server versions.
+
+`SyncScheduler` registers unique immediate and periodic WorkManager jobs with a connected-network constraint. The application schedules periodic work only when remote mode is enabled.
 
 ## Authentication And Session
 
@@ -119,9 +123,6 @@ HTTP logging is `BASIC` in debug and `NONE` in release. Authorization is redacte
 
 ## Explicit Non-Goals
 
-- WorkManager sync: NOT IMPLEMENTED.
-- Persistent outbox execution: NOT IMPLEMENTED.
-- Automatic pull/merge into Room: NOT IMPLEMENTED.
-- Remote photo upload: NOT IMPLEMENTED.
-- CameraX capture: NOT IMPLEMENTED.
-- Server conflict resolution: NOT IMPLEMENTED.
+- Remote attachment upload: deferred; the upload operation is persisted but not executed.
+- Interactive conflict resolution: not implemented; permanent conflicts remain failed for a later product phase.
+- CameraX capture: not implemented.

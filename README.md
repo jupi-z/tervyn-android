@@ -4,9 +4,9 @@ Offline-first field operations for Android.
 
 ## Status
 
-Remote API client foundation / Room-backed offline-first Android app.
+Offline sync engine foundation / Room-backed Android app.
 
-The current app keeps Room as the UI source of truth and adds a real Retrofit/OkHttp client foundation for future remote integration. No public Tervyn backend is bundled or claimed. Remote mode is disabled by default, and the local demo login remains the default runnable mode.
+The current app keeps Room as the UI source of truth and includes an opt-in push-first offline sync engine. No public Tervyn backend is bundled or claimed. Remote mode is disabled by default, and the local demo login remains the default runnable mode.
 
 ## Current Stack
 
@@ -45,7 +45,11 @@ The current app keeps Room as the UI source of truth and adds a real Retrofit/Ok
 - Bearer token injection from in-memory session state.
 - Single-flight 401 refresh with one retry maximum.
 - Logout never refreshes credentials, and `SessionCoordinator` publishes `Empty` only after durable clear success.
-- Remote job data source for remote snapshots and future mutation contracts.
+- Remote job data source for remote snapshots and mutation contracts.
+- Durable Room v2 outbox payloads with immutable client mutation IDs.
+- Push-first synchronization with conservative remote snapshot merge.
+- Cursor-based pull with a committed remote watermark and page transactions.
+- Retry/backoff handling for transient failures and WorkManager scheduling.
 - MockWebServer tests for remote auth, bearer/refresh, errors, and jobs contracts.
 - Existing UI flow: Bootstrap, Login, Interventions, Detail, Execution, Notes, Photos, Completion, Sync, Settings, Logout.
 
@@ -55,13 +59,9 @@ The current app keeps Room as the UI source of truth and adds a real Retrofit/Ok
 - Remote mode is disabled by default.
 - Default remote base URL is `https://tervyn.invalid/`.
 - The local demo login remains the default runnable mode.
-- Remote job snapshots are not yet merged into Room.
-- Background synchronization is not implemented.
-- WorkManager sync is not implemented.
-- Persistent outbox execution is not implemented.
-- Automatic pull/merge is not implemented.
-- Remote photo upload is not implemented.
-- Conflict resolution is not implemented.
+- Remote mode is opt-in and requires an external compatible backend.
+- Attachment upload execution is intentionally deferred; upload outbox rows remain durable.
+- Conflicts are detected and retained as failed local operations; no interactive resolver exists.
 - CameraX capture is not implemented.
 - The offline toggle is a UI simulation, not a system network detector.
 
@@ -79,7 +79,7 @@ When remote mode is enabled, the production base URL must be valid, use HTTPS, i
 ## Local Data Layer
 
 - Database file: `tervyn.db`.
-- Room schema version: `1`.
+- Room schema version: `2`.
 - Schema export: `app/schemas/`.
 - Destructive migrations are not enabled.
 - The operational database, secure session storage, and preferences DataStore are excluded from backup rules. `allowBackup` is disabled.

@@ -2,7 +2,7 @@
 
 ## Status
 
-Phase 4 adds the Android client foundation for a future remote API. It does not include or claim a public Tervyn backend. All network behavior is validated with MockWebServer tests.
+Phase 5 adds the Android offline sync engine on top of the remote API client foundation. It does not include or claim a public Tervyn backend. All network behavior is validated with MockWebServer tests and local fake data sources.
 
 ## Configuration
 
@@ -98,7 +98,7 @@ Server human-readable messages are not copied into stable app error codes.
 - create note;
 - delete attachment metadata.
 
-It returns remote snapshot models and does not write Room. Phase 5 will decide how remote snapshots are merged into the Room source of truth.
+It returns remote snapshot models and does not write Room. `RemotePullSynchronizer` and `RemoteJobMerger` own the Room merge boundary.
 
 ## Idempotency And Versions
 
@@ -116,13 +116,17 @@ If-Match: "<serverVersion>"
 
 The data source does not generate a new idempotency key for outbox operations.
 
+## Sync Engine Contract
+
+- Push is attempted before pull.
+- Each local mutation carries immutable versioned payload JSON and reuses its original idempotency key.
+- Transient failures return operations to `PENDING` with exponential backoff; permanent conflicts become `FAILED`.
+- Pull uses cursor pagination and a server-time watermark. The watermark is committed only after all pages merge successfully.
+- Remote merge preserves local business fields whenever an entity still has an outstanding local operation.
+- WorkManager periodic and immediate work use a connected-network constraint and are scheduled only when remote mode is enabled.
+
 ## Deferred
 
-- Remote snapshot to Room merge.
-- Persistent outbox execution.
-- WorkManager.
-- Retry/backoff scheduler.
-- Network constraints.
-- Conflict resolution.
-- SyncOperation processing.
-- Remote attachment upload.
+- Remote attachment upload execution.
+- Interactive conflict resolution.
+- CameraX capture and real media transfer.

@@ -99,6 +99,8 @@ dependencies {
   implementation(libs.androidx.lifecycle.viewmodel.compose)
   implementation(libs.androidx.navigation.compose)
   implementation(libs.androidx.hilt.navigation.compose)
+  implementation(libs.androidx.hilt.work)
+  implementation(libs.androidx.work.runtime.ktx)
   implementation(libs.kotlinx.coroutines.android)
   implementation(libs.kotlinx.coroutines.core)
   implementation(libs.hilt.android)
@@ -121,6 +123,7 @@ dependencies {
   testImplementation(libs.junit)
   testImplementation(libs.kotlinx.coroutines.test)
   testImplementation(libs.okhttp.mockwebserver)
+  testImplementation(libs.androidx.work.testing)
 
   androidTestImplementation(libs.junit)
   androidTestImplementation(libs.kotlinx.coroutines.test)
@@ -130,4 +133,5 @@ dependencies {
   androidTestImplementation(libs.androidx.test.ext.junit)
   androidTestImplementation(libs.androidx.navigation.testing)
   androidTestImplementation(libs.androidx.room.testing)
+  androidTestImplementation(libs.androidx.work.testing)
 }

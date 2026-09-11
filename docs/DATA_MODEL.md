@@ -2,12 +2,12 @@
 
 ## Status
 
-Phase 2 defines the first persistent Room schema for Tervyn Android.
+Phase 5 defines the current persistent Room schema for Tervyn Android.
 
 - Database file: `tervyn.db`
-- Room schema version: `1`
-- Schema export path: `app/schemas/dev.amenokizele.tervyn.data.local.db.TervynDatabase/1.json`
-- Remote conflict resolution: NOT IMPLEMENTED YET
+- Room schema version: `2`
+- Schema export paths: `app/schemas/dev.amenokizele.tervyn.data.local.db.TervynDatabase/1.json`, `app/schemas/dev.amenokizele.tervyn.data.local.db.TervynDatabase/2.json`
+- Remote conflict resolution: permanent conflicts are retained as failed operations; no interactive resolver exists
 
 ## Tables
 
@@ -149,6 +149,7 @@ Columns:
 - `syncState: SyncState`
 - `createdAt: Instant`
 - `uploadedAt: Instant?`
+- `serverVersion: Long?`
 - `deletedAt: Instant?`
 
 Indexes:
@@ -168,7 +169,7 @@ Soft delete:
 
 Primary key: `id`.
 
-This is a persistent local outbox only. No worker processes it in Phase 2.
+This is the durable local outbox used by the Phase 5 push-first sync engine.
 
 Columns:
 
@@ -184,6 +185,7 @@ Columns:
 - `createdAt: Instant`
 - `lastAttemptAt: Instant?`
 - `nextAttemptAt: Instant?`
+- `payloadJson: String?` (versioned immutable operation payload; null is treated as a legacy invalid operation)
 
 Indexes:
 
@@ -231,4 +233,5 @@ The repository validates current state, mutates business rows, and inserts the o
 - Domain timestamps remain `java.time.Instant`.
 - Room stores `Instant` values as epoch milliseconds through type converters.
 - New note IDs, attachment IDs, sync operation IDs, and `clientMutationId` values are full UUID strings in production.
-- `serverVersion` is persisted for future server reconciliation, but real reconciliation is not implemented yet.
+- `serverVersion` is persisted for conditional remote mutations and conservative reconciliation.
+- Attachment `UPLOAD` operations are persisted but intentionally not executed in this phase.

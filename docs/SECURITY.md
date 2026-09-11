@@ -2,7 +2,7 @@
 
 ## Phase 4 Threat Scope
 
-Phase 4 adds a production-oriented Android HTTP client foundation and remote authentication client while preserving the Phase 3 secure local session store. It does not claim that a public Tervyn backend exists and does not implement a background sync engine.
+Phase 5 adds a production-oriented Android HTTP client foundation, remote authentication client, and opt-in offline sync engine while preserving the secure local session store. It does not claim that a public Tervyn backend exists.
 
 The local storage protections do not claim resistance against a fully compromised or rooted device.
 
@@ -74,4 +74,4 @@ Certificate pinning is intentionally deferred until a stable real backend and ce
 
 ## Deferred Work
 
-Future phases must add WorkManager sync, persistent outbox execution, automatic pull/merge, retry/backoff scheduling, network constraints, conflict resolution, sync operation processing, and remote attachment upload.
+The sync engine uses WorkManager network constraints, persistent outbox execution, automatic pull/merge, retry/backoff scheduling, and explicit failed-operation retention. Interactive conflict resolution and remote attachment upload remain deferred.

@@ -3,8 +3,9 @@
 ## Current Version
 
 - Database name: `tervyn.db`
-- Current Room version: `1`
+- Current Room version: `2`
 - Version `1` is the first official persistent local schema.
+- Version `2` adds immutable outbox payload JSON, attachment server versions, and the due-operation index.
 
 ## Schema Export
 
@@ -12,6 +13,7 @@ Room schema export is enabled:
 
 ```text
 app/schemas/dev.amenokizele.tervyn.data.local.db.TervynDatabase/1.json
+app/schemas/dev.amenokizele.tervyn.data.local.db.TervynDatabase/2.json
 ```
 
 This JSON file is versioned and must remain committed so future migration tests can validate upgrades such as `1 -> 2`.
@@ -26,6 +28,8 @@ Do not use:
 fallbackToDestructiveMigration()
 fallbackToDestructiveMigrationOnDowngrade()
 ```
+
+The `1 -> 2` migration is explicit, preserves existing rows, and is covered by `RoomMigrationSchemaTest`.
 
 Future schema changes must provide explicit Room migrations and tests.
 
