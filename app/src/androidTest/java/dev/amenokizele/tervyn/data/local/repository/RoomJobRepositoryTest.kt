@@ -15,6 +15,12 @@ import dev.amenokizele.tervyn.data.local.entity.SyncOperationEntity
 import dev.amenokizele.tervyn.data.local.entity.SyncOperationStatus
 import dev.amenokizele.tervyn.data.local.entity.SyncOperationType
 import dev.amenokizele.tervyn.data.local.entity.UserEntity
+import dev.amenokizele.tervyn.data.local.sync.AttachmentDeletePayload
+import dev.amenokizele.tervyn.data.local.sync.AttachmentUploadPayload
+import dev.amenokizele.tervyn.data.local.sync.ChecklistItemPayload
+import dev.amenokizele.tervyn.data.local.sync.JobStatusPayload
+import dev.amenokizele.tervyn.data.local.sync.NoteCreatePayload
+import dev.amenokizele.tervyn.data.local.sync.SyncOperationPayloadCodec
 import dev.amenokizele.tervyn.domain.model.AddAttachmentRequest
 import dev.amenokizele.tervyn.domain.model.AttachmentType
 import dev.amenokizele.tervyn.domain.model.JobPriority
@@ -63,6 +69,14 @@ class RoomJobRepositoryTest {
         assertEquals(SyncEntityType.JOB, operations.single().entityType)
         assertEquals(SyncOperationType.UPDATE, operations.single().operation)
         assertEquals("mutation-start", operations.single().clientMutationId)
+        assertEquals(
+            JobStatusPayload("job-1", "IN_PROGRESS", now.toString()),
+            (SyncOperationPayloadCodec().decode(
+                operations.single().payloadJson,
+                SyncEntityType.JOB,
+                SyncOperationType.UPDATE
+            ) as AppResult.Success).data
+        )
     }
 
     @Test
@@ -105,6 +119,31 @@ class RoomJobRepositoryTest {
             operations.map { it.operation }
         )
         assertEquals(5, operations.map { it.clientMutationId }.toSet().size)
+        assertEquals(
+            ChecklistItemPayload("job-1", "checklist-1", true, now.toString()),
+            payloadAt(operations, 0)
+        )
+        assertEquals(
+            NoteCreatePayload(
+                "job-1",
+                "note-id-00000000-0000-0000-0000-000000000001",
+                "Diagnostic OK",
+                now.toString()
+            ),
+            payloadAt(operations, 1)
+        )
+        assertEquals(
+            AttachmentUploadPayload("job-1", "attachment-id-00000000-0000-0000-0000-000000000002"),
+            payloadAt(operations, 2)
+        )
+        assertEquals(
+            AttachmentDeletePayload("job-1", "attachment-existing"),
+            payloadAt(operations, 3)
+        )
+        assertEquals(
+            JobStatusPayload("job-1", "COMPLETED", now.toString()),
+            payloadAt(operations, 4)
+        )
     }
 
     @Test
@@ -122,6 +161,41 @@ class RoomJobRepositoryTest {
 
         assertEquals(0, database.syncOperationDao().observeAllOrdered().first().size)
         assertEquals(JobStatus.COMPLETED, repository.observeJob("job-1").first()?.status)
+    }
+
+    @Test
+    fun deletingLocalOnlyAttachmentCompactsItsUploadAndHardDeletesRow() = runBlocking {
+        database.jobDao().insertJob(job(status = JobStatus.IN_PROGRESS))
+        database.attachmentDao().upsert(
+            attachment(id = "attachment-local-only").copy(
+                remoteUrl = null,
+                uploadedAt = null,
+                syncState = SyncState.PENDING
+            )
+        )
+        ids.enqueue("upload-op", "upload-mutation")
+        database.syncOperationDao().insert(
+            SyncOperationEntity(
+                id = "upload-op",
+                entityType = SyncEntityType.ATTACHMENT,
+                entityId = "attachment-local-only",
+                operation = SyncOperationType.UPLOAD,
+                clientMutationId = "upload-mutation",
+                status = SyncOperationStatus.PENDING,
+                attemptCount = 0,
+                lastErrorCode = null,
+                lastErrorMessage = null,
+                createdAt = now,
+                lastAttemptAt = null,
+                nextAttemptAt = null,
+                payloadJson = "{}"
+            )
+        )
+
+        assertTrue(repository.deleteAttachment("job-1", "attachment-local-only") is AppResult.Success)
+
+        assertNull(database.attachmentDao().getById("attachment-local-only"))
+        assertTrue(database.syncOperationDao().observeAllOrdered().first().isEmpty())
     }
 
     @Test
@@ -260,6 +334,17 @@ class RoomJobRepositoryTest {
         fileName = "Photo terrain",
         sizeBytes = 42,
         checksumSha256 = null
+    )
+
+    private fun payloadAt(
+        operations: List<SyncOperationEntity>,
+        index: Int
+    ): Any = requireNotNull(
+        (SyncOperationPayloadCodec().decode(
+            operations[index].payloadJson,
+            operations[index].entityType,
+            operations[index].operation
+        ) as AppResult.Success).data
     )
 
     private class FixedClock : TervynClock {

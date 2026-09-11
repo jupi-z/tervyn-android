@@ -13,6 +13,13 @@ import dev.amenokizele.tervyn.data.local.entity.SyncOperationEntity
 import dev.amenokizele.tervyn.data.local.entity.SyncOperationStatus
 import dev.amenokizele.tervyn.data.local.entity.SyncOperationType
 import dev.amenokizele.tervyn.data.local.mapper.toDomain
+import dev.amenokizele.tervyn.data.local.sync.AttachmentDeletePayload
+import dev.amenokizele.tervyn.data.local.sync.AttachmentUploadPayload
+import dev.amenokizele.tervyn.data.local.sync.ChecklistItemPayload
+import dev.amenokizele.tervyn.data.local.sync.JobStatusPayload
+import dev.amenokizele.tervyn.data.local.sync.NoteCreatePayload
+import dev.amenokizele.tervyn.data.local.sync.SyncOperationPayload
+import dev.amenokizele.tervyn.data.local.sync.SyncOperationPayloadCodec
 import dev.amenokizele.tervyn.domain.model.AddAttachmentRequest
 import dev.amenokizele.tervyn.domain.model.Attachment
 import dev.amenokizele.tervyn.domain.model.Job
@@ -37,6 +44,7 @@ class RoomJobRepository @Inject constructor(
     private val attachmentDao = database.attachmentDao()
     private val userDao = database.userDao()
     private val syncOperationDao = database.syncOperationDao()
+    private val payloadCodec = SyncOperationPayloadCodec()
 
     override fun observeJobs(): Flow<List<Job>> {
         return jobDao.observeJobsWithDetails().map { relations ->
@@ -64,7 +72,13 @@ class RoomJobRepository @Inject constructor(
                     updatedAt = now
                 )
             )
-            enqueue(SyncEntityType.JOB, jobId, SyncOperationType.UPDATE, now)
+            enqueue(
+                entityType = SyncEntityType.JOB,
+                entityId = jobId,
+                operation = SyncOperationType.UPDATE,
+                now = now,
+                payload = JobStatusPayload(jobId, JobStatus.IN_PROGRESS.name, now.toString())
+            )
             AppResult.Success(Unit)
         }
     }
@@ -91,7 +105,13 @@ class RoomJobRepository @Inject constructor(
                     updatedAt = now
                 )
             )
-            enqueue(SyncEntityType.CHECKLIST_ITEM, checklistItemId, SyncOperationType.UPDATE, now)
+            enqueue(
+                entityType = SyncEntityType.CHECKLIST_ITEM,
+                entityId = checklistItemId,
+                operation = SyncOperationType.UPDATE,
+                now = now,
+                payload = ChecklistItemPayload(jobId, checklistItemId, completed, if (completed) now.toString() else null)
+            )
             AppResult.Success(Unit)
         }
     }
@@ -122,7 +142,13 @@ class RoomJobRepository @Inject constructor(
                 deletedAt = null
             )
             noteDao.upsert(note)
-            enqueue(SyncEntityType.NOTE, note.id, SyncOperationType.CREATE, now)
+            enqueue(
+                entityType = SyncEntityType.NOTE,
+                entityId = note.id,
+                operation = SyncOperationType.CREATE,
+                now = now,
+                payload = NoteCreatePayload(jobId, note.id, trimmedContent, now.toString())
+            )
             AppResult.Success(note.toDomain())
         }
     }
@@ -158,7 +184,13 @@ class RoomJobRepository @Inject constructor(
                 deletedAt = null
             )
             attachmentDao.upsert(attachment)
-            enqueue(SyncEntityType.ATTACHMENT, attachment.id, SyncOperationType.UPLOAD, now)
+            enqueue(
+                entityType = SyncEntityType.ATTACHMENT,
+                entityId = attachment.id,
+                operation = SyncOperationType.UPLOAD,
+                now = now,
+                payload = AttachmentUploadPayload(jobId, attachment.id)
+            )
             AppResult.Success(attachment.toDomain())
         }
     }
@@ -176,13 +208,24 @@ class RoomJobRepository @Inject constructor(
             if (attachment.jobId != jobId || attachment.deletedAt != null) {
                 return@withTransaction AppResult.Failure(AppError.NotFound("attachment", attachmentId))
             }
+            if (attachment.remoteUrl == null && attachment.uploadedAt == null) {
+                syncOperationDao.deletePendingUploadForAttachment(attachmentId)
+                attachmentDao.deleteById(attachmentId)
+                return@withTransaction AppResult.Success(Unit)
+            }
             attachmentDao.update(
                 attachment.copy(
                     deletedAt = now,
                     syncState = SyncState.PENDING
                 )
             )
-            enqueue(SyncEntityType.ATTACHMENT, attachmentId, SyncOperationType.DELETE, now)
+            enqueue(
+                entityType = SyncEntityType.ATTACHMENT,
+                entityId = attachmentId,
+                operation = SyncOperationType.DELETE,
+                now = now,
+                payload = AttachmentDeletePayload(jobId, attachmentId)
+            )
             AppResult.Success(Unit)
         }
     }
@@ -208,7 +251,13 @@ class RoomJobRepository @Inject constructor(
                     updatedAt = now
                 )
             )
-            enqueue(SyncEntityType.JOB, jobId, SyncOperationType.UPDATE, now)
+            enqueue(
+                entityType = SyncEntityType.JOB,
+                entityId = jobId,
+                operation = SyncOperationType.UPDATE,
+                now = now,
+                payload = JobStatusPayload(jobId, JobStatus.COMPLETED.name, now.toString())
+            )
             AppResult.Success(Unit)
         }
     }
@@ -217,7 +266,8 @@ class RoomJobRepository @Inject constructor(
         entityType: SyncEntityType,
         entityId: String,
         operation: SyncOperationType,
-        now: java.time.Instant
+        now: java.time.Instant,
+        payload: SyncOperationPayload
     ) {
         syncOperationDao.insert(
             SyncOperationEntity(
@@ -232,7 +282,8 @@ class RoomJobRepository @Inject constructor(
                 lastErrorMessage = null,
                 createdAt = now,
                 lastAttemptAt = null,
-                nextAttemptAt = null
+                nextAttemptAt = null,
+                payloadJson = payloadCodec.encode(payload)
             )
         )
     }

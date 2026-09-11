@@ -29,7 +29,7 @@ import dev.amenokizele.tervyn.data.local.entity.UserEntity
         SyncOperationEntity::class,
         LocalMetadataEntity::class
     ],
-    version = 1,
+    version = 2,
     exportSchema = true
 )
 @TypeConverters(RoomConverters::class)

@@ -30,4 +30,7 @@ interface AttachmentDao {
 
     @Update
     suspend fun update(attachment: AttachmentEntity)
+
+    @Query("DELETE FROM attachments WHERE id = :attachmentId")
+    suspend fun deleteById(attachmentId: String)
 }

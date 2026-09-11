@@ -127,7 +127,7 @@ class RoomDaoTest {
         assertEquals(2, database.syncOperationDao().observePendingCount().first())
         assertEquals(1, database.syncOperationDao().observeFailedCount().first())
         assertEquals(listOf("op-1", "op-2", "op-3"), database.syncOperationDao().observeAllOrdered().first().map { it.id })
-        assertEquals(listOf("op-1", "op-2"), database.syncOperationDao().getNextPendingOperations(limit = 5).map { it.id })
+        assertEquals(listOf("op-1", "op-2"), database.syncOperationDao().getManualOperations(limit = 5).map { it.id })
     }
 
     @Test

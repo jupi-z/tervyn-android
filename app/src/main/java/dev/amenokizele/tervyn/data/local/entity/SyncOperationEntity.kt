@@ -46,5 +46,6 @@ data class SyncOperationEntity(
     val lastErrorMessage: String?,
     val createdAt: Instant,
     val lastAttemptAt: Instant?,
-    val nextAttemptAt: Instant?
+    val nextAttemptAt: Instant?,
+    val payloadJson: String? = null
 )

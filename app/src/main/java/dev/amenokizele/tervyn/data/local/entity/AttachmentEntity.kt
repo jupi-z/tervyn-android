@@ -39,5 +39,6 @@ data class AttachmentEntity(
     val syncState: SyncState,
     val createdAt: Instant,
     val uploadedAt: Instant?,
-    val deletedAt: Instant?
+    val deletedAt: Instant?,
+    val serverVersion: Long? = null
 )
