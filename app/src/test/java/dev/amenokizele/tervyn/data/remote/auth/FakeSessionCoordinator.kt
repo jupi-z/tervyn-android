@@ -14,8 +14,8 @@ class FakeSessionCoordinator(initial: StoredSession?) : SessionCoordinator {
     var current: StoredSession? = initial
     var replaceResult: AppResult<Unit> = AppResult.Success(Unit)
     var clearResult: AppResult<Unit> = AppResult.Success(Unit)
-    var replaceCalls = 0
-    var clearCalls = 0
+    @Volatile var replaceCalls = 0
+    @Volatile var clearCalls = 0
 
     override suspend fun restore(): AppResult<StoredSession?> = AppResult.Success(current)
 

@@ -13,8 +13,12 @@ import dev.amenokizele.tervyn.core.time.TervynDateTimeFormatter
 import dev.amenokizele.tervyn.data.local.dao.SyncOperationDao
 import dev.amenokizele.tervyn.data.local.dao.UserDao
 import dev.amenokizele.tervyn.data.local.db.TervynDatabase
+import dev.amenokizele.tervyn.data.local.db.MIGRATION_1_2
 import dev.amenokizele.tervyn.data.local.repository.LocalIdGenerator
 import dev.amenokizele.tervyn.data.local.repository.UuidLocalIdGenerator
+import dev.amenokizele.tervyn.data.local.sync.SyncRuntimeStateStore
+import dev.amenokizele.tervyn.data.local.sync.SyncBackoffPolicy
+import dev.amenokizele.tervyn.data.local.sync.SyncOperationPayloadCodec
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -55,7 +59,7 @@ object AppModule {
             context,
             TervynDatabase::class.java,
             TervynDatabase.DATABASE_NAME
-        ).build()
+        ).addMigrations(MIGRATION_1_2).build()
     }
 
     @Provides
@@ -71,6 +75,21 @@ object AppModule {
     fun provideUserDao(database: TervynDatabase): UserDao {
         return database.userDao()
     }
+
+    @Provides
+    fun provideLocalMetadataDao(database: TervynDatabase) = database.localMetadataDao()
+
+    @Provides
+    @Singleton
+    fun provideSyncRuntimeStateStore(): SyncRuntimeStateStore = SyncRuntimeStateStore()
+
+    @Provides
+    @Singleton
+    fun provideSyncOperationPayloadCodec(): SyncOperationPayloadCodec = SyncOperationPayloadCodec()
+
+    @Provides
+    @Singleton
+    fun provideSyncBackoffPolicy(): SyncBackoffPolicy = SyncBackoffPolicy()
 
     @Provides
     @Singleton
