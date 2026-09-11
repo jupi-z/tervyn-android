@@ -134,4 +134,5 @@ dependencies {
   androidTestImplementation(libs.androidx.navigation.testing)
   androidTestImplementation(libs.androidx.room.testing)
   androidTestImplementation(libs.androidx.work.testing)
+  androidTestImplementation(libs.okhttp.mockwebserver)
 }
